@@ -1,107 +1,108 @@
 <title>Galvez Martin en mosaïque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Knewave&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
 <style>
-  /* Une seule scène : le nom en tesselles sur un fond de joint, commandes discrètes en bas. */
+  /* Une seule scène : un mur en mosaïque, le nom en pièce de graffiti. Commandes flottantes en bas. */
   :root {
-    --grout: #ecebe6;       /* joint / enduit */
-    --grout-deep: #dedcd4;
-    --ink: #1d1c22;
-    --ink-soft: #6b6973;
-    --chip: #ffffff;
-    --chip-line: #d3d1c8;
-    --shadow: 20, 18, 30;   /* r,g,b de l'ombre des tesselles */
-    --display: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    --grout: #a69e91;           /* joint de ciment */
+    --panel: rgba(28, 24, 22, .78);
+    --panel-ink: #f4f1ea;
+    --panel-soft: rgba(244, 241, 234, .6);
+    --display: "Knewave", "Arial Black", sans-serif;
     --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --grout: #16161b; --grout-deep: #0f0f13; --ink: #f1efe9; --ink-soft: #9a98a3;
-      --chip: #22222a; --chip-line: #33333d; --shadow: 0, 0, 0; color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --grout: #16161b; --grout-deep: #0f0f13; --ink: #f1efe9; --ink-soft: #9a98a3;
-    --chip: #22222a; --chip-line: #33333d; --shadow: 0, 0, 0; color-scheme: dark;
-  }
-
   html, body { height: 100%; }
-  body {
-    margin: 0;
-    background: radial-gradient(120% 90% at 50% 40%, var(--grout) 40%, var(--grout-deep) 100%);
-    background-color: var(--grout);
-    color: var(--ink);
-    font-family: var(--ui);
-    display: grid;
-    grid-template-rows: 1fr auto;
-    overflow: hidden;
-  }
-  .scene { position: relative; min-height: 0; }
-  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  body { margin: 0; background: var(--grout); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
   .controls {
-    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: center;
-    padding-block: 14px 22px; padding-inline: 16px;
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center;
+    background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    padding: 6px; border-radius: 14px; max-width: calc(100% - 32px);
   }
-  .seg {
-    display: inline-flex; padding: 4px; gap: 2px; border-radius: 12px;
-    background: var(--chip); border: 1px solid var(--chip-line);
+  .controls button {
+    font: 600 13px/1 var(--ui); color: var(--panel-ink); background: transparent; border: 0; cursor: pointer;
+    padding: 9px 12px; border-radius: 9px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
   }
-  .seg button, .btn {
-    font: 600 14px/1 var(--ui); color: var(--ink); cursor: pointer;
-    border: 0; background: transparent; padding: 10px 14px; border-radius: 9px;
-    display: inline-flex; gap: 8px; align-items: center;
+  .controls button:hover { background: rgba(255, 255, 255, .1); }
+  .controls button[aria-pressed="true"] { background: rgba(255, 255, 255, .16); }
+  .controls button:focus-visible { outline: 2px solid var(--panel-ink); outline-offset: 1px; }
+  .swatch { display: inline-flex; }
+  .swatch i { width: 9px; height: 14px; display: block; border-radius: 2px; margin-right: 1px; }
+  @media (max-width: 520px) {
+    .controls { flex-wrap: nowrap; gap: 2px; }
+    .controls button { padding: 9px 8px; gap: 6px; }
+    .swatch i { width: 6px; }
   }
-  .seg button span { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-weight: 400; }
-  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--grout); }
-  .seg button[aria-pressed="true"] span { color: inherit; opacity: .6; }
-  .btn { background: var(--chip); border: 1px solid var(--chip-line); padding: 12px 16px; }
-  .btn:hover, .seg button:hover:not([aria-pressed="true"]) { background: var(--grout-deep); }
-  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  .hint { width: 100%; text-align: center; margin: 0; font-size: 13px; color: var(--ink-soft); }
-  kbd { font: inherit; border: 1px solid var(--chip-line); border-radius: 4px; padding: 0 5px; }
+  .sep { width: 1px; align-self: stretch; background: rgba(255, 255, 255, .18); margin: 4px 2px; }
 </style>
 
-<div class="scene"><canvas id="mosaic" aria-label="Galvez Martin" role="img"></canvas></div>
+<canvas id="mur" role="img" aria-label="Galvez Martin, écrit en mosaïque façon graffiti"></canvas>
 
-<div class="controls">
-  <div class="seg" role="group" aria-label="Choix de l'animation">
-    <button type="button" id="mode-chute" data-mode="chute" aria-pressed="true"><span>1</span>Chute</button>
-    <button type="button" id="mode-tourbillon" data-mode="tourbillon" aria-pressed="false"><span>2</span>Tourbillon</button>
-    <button type="button" id="mode-pose" data-mode="pose" aria-pressed="false"><span>3</span>Pose</button>
-  </div>
-  <button type="button" class="btn" id="replay">↻ Rejouer</button>
-  <p class="hint">Touches <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> pour changer, <kbd>espace</kbd> pour rejouer. Passez la souris sur les lettres.</p>
+<div class="controls" role="group" aria-label="Réglages">
+  <button type="button" id="pal-lavande" data-pal="lavande" aria-pressed="true"><span class="swatch"><i style="background:#cdd7f5"></i><i style="background:#7c63d6"></i><i style="background:#f7b28c"></i></span>Lavande</button>
+  <button type="button" id="pal-menthe" data-pal="menthe" aria-pressed="false"><span class="swatch"><i style="background:#3fd27a"></i><i style="background:#1fb9b0"></i><i style="background:#0b4a3a"></i></span>Menthe</button>
+  <button type="button" id="pal-magenta" data-pal="magenta" aria-pressed="false"><span class="swatch"><i style="background:#d9d2f7"></i><i style="background:#c4508f"></i><i style="background:#1c1528"></i></span>Magenta</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="rejouer">↻ Rejouer</button>
 </div>
 
 <script>
 (function () {
   'use strict';
 
-  var NAME = 'GALVEZ MARTIN';
-  // Tesselles : émaux vifs, comme des smalti.
-  var PALETTE = ['#e23d2e', '#f2711c', '#f6b417', '#8cc63e', '#1fa463', '#13a3a6', '#2468d8', '#4b3fc4', '#9b3bbf', '#d93a83'];
+  var NAME = ['Galvez', 'Martin'];
 
-  var canvas = document.getElementById('mosaic');
+  /* ---------- Palettes, tirées des graffitis de référence ---------- */
+  var PALETTES = {
+    lavande: { // « EMPAZ » : lettres bleu lavande, 3D violette, nuage pêche / jaune / turquoise
+      fill: ['#dfe6fb', '#cdd7f5', '#bcc8ee', '#d6defa', '#c4cff2'],
+      shine: ['#ffffff', '#f3f6ff'],
+      line: ['#2e1f6e', '#33237a', '#281a60'],
+      depth: ['#7c63d6', '#6a50c8', '#8b74e0', '#7358cf'],
+      outer: ['#241656', '#1d1248'],
+      cloud: ['#f7b28c', '#f5c35a', '#2fb5a6', '#f39a7b', '#7fd3c5', '#f8c9a3'],
+      speck: ['#2fb5a6', '#f5c35a']
+    },
+    menthe: { // « BSA » : verts et turquoise, ombre vert profond, nuage rose et lilas
+      fill: ['#3fd27a', '#2fc76c', '#55dc8c', '#1fb9b0', '#36cfa0'],
+      shine: ['#ffffff', '#e4fbef'],
+      line: ['#0b4a3a', '#0d5442', '#093d30'],
+      depth: ['#0f7a5c', '#10916e', '#0c6a50', '#13856a'],
+      outer: ['#062c22', '#08372b'],
+      cloud: ['#f4a9c1', '#a99cf2', '#f6c7d6', '#8fd8f0', '#c3b8f7'],
+      speck: ['#ffffff', '#1fb9b0']
+    },
+    magenta: { // « DVO » : lavande pâle, magenta, noir
+      fill: ['#e3dcf8', '#d4ccf4', '#cbc3f2', '#ede6fb', '#d9d2f7'],
+      shine: ['#ffffff', '#f7f3ff'],
+      line: ['#1c1528', '#221a31', '#16101f'],
+      depth: ['#c4508f', '#b23a7c', '#a8306f', '#cf5f9a'],
+      outer: ['#120c1c', '#0d0915'],
+      cloud: ['#c14d8f', '#8a5ad0', '#e07ab0', '#a77de0', '#d6a3e8'],
+      speck: ['#c4508f', '#8a5ad0']
+    }
+  };
+  // Tesselles du fond : blanc cassé, comme le mur de référence.
+  var STONE = ['#efece6', '#e8e4dc', '#f4f2ed', '#e1ddd3', '#ebe7df', '#f0eee8'];
+  var GROUT = '#a69e91';
+
+  var canvas = document.getElementById('mur');
   var ctx = canvas.getContext('2d');
+  var bed = document.createElement('canvas');      // les tesselles posées s'accumulent ici
+  var bctx = bed.getContext('2d');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var W = 0, H = 0, DPR = 1, S = 10;
-  var tiles = [];
-  var mode = 'chute';
-  var t0 = 0, totalDuration = 0;
-  var pointer = { x: -9999, y: -9999, active: false };
-  var shadowRGB = '20,18,30';
+  var W, H, DPR, G = 2;                            // G : résolution de la grille de calcul (px)
+  var ROW;                                         // hauteur d'une rangée de tesselles
+  var tiles = [], layout = null, palName = 'lavande';
+  var t0 = 0, running = false, flying = [];
 
-  /* ---------- Outils ---------- */
-  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
-  function easeOutCubic(p) { return 1 - Math.pow(1 - p, 3); }
-  function easeInOutSine(p) { return -(Math.cos(Math.PI * p) - 1) / 2; }
-  // Ressort amorti : arrive à 1 en dépassant légèrement.
-  function spring(p) { return 1 - Math.exp(-6.5 * p) * Math.cos(9 * p); }
-
-  // Petit générateur pseudo-aléatoire reproductible (même mosaïque à chaque rejeu).
+  /* ---------- Hasard reproductible ---------- */
   function rng(seed) {
     return function () {
       seed |= 0; seed = seed + 0x6D2B79F5 | 0;
@@ -110,387 +111,601 @@
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
-
-  function hexToRgb(h) {
-    var n = parseInt(h.slice(1), 16);
-    return [n >> 16 & 255, n >> 8 & 255, n & 255];
-  }
-  function mix(a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
-  function rgb(c, k) {
-    k = k || 0; // k > 0 éclaircit, k < 0 assombrit
-    var t = k > 0 ? [255, 255, 255] : [0, 0, 0];
-    var m = mix(c, t, Math.abs(k));
-    return 'rgb(' + (m[0] | 0) + ',' + (m[1] | 0) + ',' + (m[2] | 0) + ')';
-  }
-  var PAL = PALETTE.map(hexToRgb);
-
-  /* ---------- Construction de la mosaïque ---------- */
-  function layoutText(measureCtx) {
-    var font = function (size) { return size + 'px ' + getComputedStyle(document.documentElement).getPropertyValue('--display'); };
-    measureCtx.font = font(100);
-    var full = measureCtx.measureText(NAME).width;
-    var words = NAME.split(' ');
-    var widest = Math.max.apply(null, words.map(function (w) { return measureCtx.measureText(w).width; }));
-
-    // Le nom est empilé sur deux lignes : les lettres sont plus grandes, donc plus lisibles en tesselles.
-    var size = Math.min((W * 0.86) / widest * 100, H * 0.34);
-    if (words.length > 1) return { lines: words, size: size, font: font(size) };
-    var one = Math.min((W * 0.86) / full * 100, H * 0.5);
-    return { lines: [NAME], size: one, font: font(one) };
+  var R = rng(1);
+  function pick(arr) { return arr[(R() * arr.length) | 0]; }
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function hex(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  function css(c, k) {
+    k = k || 0;
+    var t = k > 0 ? 255 : 0, a = Math.abs(k);
+    return 'rgb(' + ((c[0] + (t - c[0]) * a) | 0) + ',' + ((c[1] + (t - c[1]) * a) | 0) + ',' + ((c[2] + (t - c[2]) * a) | 0) + ')';
   }
 
-  function build() {
-    var rect = canvas.getBoundingClientRect();
-    W = Math.max(1, rect.width); H = Math.max(1, rect.height);
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-    shadowRGB = getComputedStyle(document.documentElement).getPropertyValue('--shadow').trim() || shadowRGB;
-
-    var off = document.createElement('canvas');
-    off.width = Math.ceil(W); off.height = Math.ceil(H);
-    var o = off.getContext('2d', { willReadFrequently: true });
-    var L = layoutText(o);
-    o.font = L.font;
-    o.textAlign = 'center';
-    o.textBaseline = 'alphabetic';
-    o.fillStyle = '#000';
-
-    var lineH = L.size * 0.92;
-    var m = o.measureText('H');
-    var capH = m.actualBoundingBoxAscent || L.size * 0.72;
-    var blockH = capH + lineH * (L.lines.length - 1);
-    var baseY = H / 2 - blockH / 2 + capH;
-    L.lines.forEach(function (line, i) { o.fillText(line, W / 2, baseY + i * lineH); });
-
-    // Taille d'une tesselle : environ un douzième de la hauteur des lettres.
-    S = clamp(capH / 12, 6, 22);
-    var data = o.getImageData(0, 0, off.width, off.height).data;
-    function ink(x, y) {
-      x = x | 0; y = y | 0;
-      if (x < 0 || y < 0 || x >= off.width || y >= off.height) return 0;
-      return data[(y * off.width + x) * 4 + 3] > 120 ? 1 : 0;
-    }
-
-    var rand = rng(7);
-    var a1 = rand() * 6, a2 = rand() * 6, a3 = rand() * 6;
-    tiles = [];
-    var cols = Math.ceil(W / S), rows = Math.ceil(H / S);
-    var ox = (W - cols * S) / 2, oy = (H - rows * S) / 2;
-    for (var r = 0; r < rows; r++) {
-      for (var c = 0; c < cols; c++) {
-        var x0 = ox + c * S, y0 = oy + r * S;
-        var hits = ink(x0 + S * .25, y0 + S * .25) + ink(x0 + S * .75, y0 + S * .25) +
-                   ink(x0 + S * .25, y0 + S * .75) + ink(x0 + S * .75, y0 + S * .75) + ink(x0 + S * .5, y0 + S * .5);
-        if (hits < 3) continue;
-
-        var cx = x0 + S / 2, cy = y0 + S / 2;
-        // Couleur : un champ de couleurs qui ondule à travers les lettres, + un peu de hasard.
-        var n = (Math.sin(cx / W * 5.2 + a1) + Math.sin(cy / H * 3.1 + a2) + Math.sin((cx + cy) / (W + H) * 7 + a3)) / 3;
-        var idx = clamp((n * 0.5 + 0.5) * PAL.length + (rand() - 0.5) * 2.2, 0, PAL.length - 0.001);
-        var base = PAL[idx | 0];
-        var shade = (rand() - 0.5) * 0.22;
-
-        // Carré légèrement irrégulier : chaque coin bouge un peu.
-        var h = 0.43, j = 0.075;
-        var corners = [
-          [-h + (rand() - .5) * j * 2, -h + (rand() - .5) * j * 2],
-          [ h + (rand() - .5) * j * 2, -h + (rand() - .5) * j * 2],
-          [ h + (rand() - .5) * j * 2,  h + (rand() - .5) * j * 2],
-          [-h + (rand() - .5) * j * 2,  h + (rand() - .5) * j * 2]
-        ];
-
-        tiles.push({
-          x: cx, y: cy, rot: (rand() - 0.5) * 0.12, corners: corners,
-          fill: rgb(base, shade), facet: rgb(base, shade + 0.28), edge: rgb(base, shade - 0.25),
-          r1: rand(), r2: rand(), r3: rand(), r4: rand(),
-          hx: 0, hy: 0, hl: 0,
-          row: r, col: c
-        });
+  /* ---------- Transformée de distance euclidienne exacte (Felzenszwalb) ---------- */
+  var BIG = 1e12;
+  function edt(inside, w, h) {
+    // Pour chaque case « dedans », distance à la case « dehors » la plus proche.
+    var f = new Float64Array(Math.max(w, h)), d = new Float64Array(Math.max(w, h));
+    var v = new Int32Array(Math.max(w, h)), z = new Float64Array(Math.max(w, h) + 1);
+    var grid = new Float64Array(w * h), out = new Float32Array(w * h), x, y, n;
+    for (var i = 0; i < w * h; i++) grid[i] = inside[i] ? BIG : 0;
+    function pass(n) {
+      var k = 0, q, s;
+      v[0] = 0; z[0] = -BIG; z[1] = BIG;
+      for (q = 1; q < n; q++) {
+        s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+        while (s <= z[k]) { k--; s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+        k++; v[k] = q; z[k] = s; z[k + 1] = BIG;
       }
+      k = 0;
+      for (q = 0; q < n; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
     }
-    planTimings();
+    for (x = 0; x < w; x++) {
+      for (y = 0; y < h; y++) f[y] = grid[y * w + x];
+      pass(h);
+      for (y = 0; y < h; y++) grid[y * w + x] = d[y];
+    }
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) f[x] = grid[y * w + x];
+      pass(w);
+      for (x = 0; x < w; x++) out[y * w + x] = Math.sqrt(d[x]) * G;
+    }
+    return out;
   }
 
-  /* ---------- Les 3 animations ---------- */
-  // Chaque fonction renvoie l'état d'une tesselle au temps t (ms) :
-  // position, rotation, échelle, opacité, « hauteur » (pour l'ombre) et éclat.
-
-  var MODES = {
-    // 1. Chute : les tesselles tombent avec la gravité, rebondissent et se calent.
-    //    La mosaïque se monte de bas en haut, comme un mur.
-    chute: {
-      plan: function () {
-        var maxRow = 0, minRow = 1e9;
-        tiles.forEach(function (t) { maxRow = Math.max(maxRow, t.row); minRow = Math.min(minRow, t.row); });
-        var span = Math.max(1, maxRow - minRow);
-        var g = 2 * H / (620 * 620); // px / ms²
-        var end = 0;
-        tiles.forEach(function (t) {
-          var k = (maxRow - t.row) / span;
-          t.delay = k * 1500 + t.r1 * 380 + Math.sin(t.col * 0.45) * 90 + 90;
-          t.startY = -S * 2 - t.r2 * H * 0.35;
-          t.fall = Math.sqrt(2 * (t.y - t.startY) / g);
-          t.g = g;
-          t.spin = (t.r3 - 0.5) * 4;
-          t.drift = (t.r4 - 0.5) * S * 3;
-          t.end = t.delay + t.fall + 420;
-          end = Math.max(end, t.end);
-        });
-        return end;
-      },
-      at: function (t, time, o) {
-        var tau = time - t.delay;
-        if (tau <= 0) { o.alpha = 0; return; }
-        o.alpha = 1;
-        if (tau < t.fall) {
-          var p = tau / t.fall;
-          o.x = t.x + t.drift * (1 - p);
-          o.y = t.startY + 0.5 * t.g * tau * tau;
-          o.rot = t.rot + t.spin * (1 - p);
-          o.lift = 1 - p * 0.7;
-          return;
+  /* ---------- Courbes de niveau (marching squares) ---------- */
+  var CASES = [[], [[3, 0]], [[0, 1]], [[3, 1]], [[1, 2]], null, [[0, 2]], [[2, 3]],
+               [[2, 3]], [[0, 2]], null, [[1, 2]], [[3, 1]], [[0, 1]], [[3, 0]], []];
+  function contours(D, w, h, level) {
+    var pts = new Map(), adj = new Map();
+    function key(i, j, e) {
+      // arête haute/basse : horizontale ; gauche/droite : verticale
+      if (e === 0) return (j * w + i) * 2;
+      if (e === 2) return ((j + 1) * w + i) * 2;
+      if (e === 3) return (j * w + i) * 2 + 1;
+      return (j * w + i + 1) * 2 + 1;
+    }
+    function point(i, j, e, a, b, c, d) {
+      var t;
+      if (e === 0) { t = (level - a) / (b - a); return [i + t, j]; }
+      if (e === 1) { t = (level - b) / (c - b); return [i + 1, j + t]; }
+      if (e === 2) { t = (level - d) / (c - d); return [i + t, j + 1]; }
+      t = (level - a) / (d - a); return [i, j + t];
+    }
+    function link(k1, k2) {
+      (adj.get(k1) || adj.set(k1, []).get(k1)).push(k2);
+      (adj.get(k2) || adj.set(k2, []).get(k2)).push(k1);
+    }
+    for (var j = 0; j < h - 1; j++) {
+      for (var i = 0; i < w - 1; i++) {
+        var a = D[j * w + i], b = D[j * w + i + 1], c = D[(j + 1) * w + i + 1], d = D[(j + 1) * w + i];
+        var idx = (a >= level ? 1 : 0) | (b >= level ? 2 : 0) | (c >= level ? 4 : 0) | (d >= level ? 8 : 0);
+        if (idx === 0 || idx === 15) continue;
+        var segs = CASES[idx];
+        if (!segs) {
+          var centre = (a + b + c + d) / 4 >= level;
+          segs = idx === 5 ? (centre ? [[0, 1], [2, 3]] : [[3, 0], [1, 2]])
+                           : (centre ? [[3, 0], [1, 2]] : [[0, 1], [2, 3]]);
         }
-        var u = clamp((tau - t.fall) / 420, 0, 1);
-        var damp = Math.exp(-5 * u);
-        o.x = t.x;
-        o.y = t.y - S * 0.55 * damp * Math.abs(Math.sin(u * Math.PI * 2.4));
-        o.rot = t.rot + 0.25 * (t.r3 - 0.5) * damp * Math.cos(u * 14);
-        o.scale = 1 + 0.08 * damp * Math.sin(u * 20); // petit écrasement à l'impact
-        o.lift = 0.25 * damp;
-        o.glow = 0.35 * Math.exp(-9 * u);
-      }
-    },
-
-    // 2. Tourbillon : un nuage de tesselles tourne autour du nom et s'y aspire en spirale.
-    tourbillon: {
-      plan: function () {
-        var cx = W / 2, cy = H / 2, maxR = 0, end = 0;
-        tiles.forEach(function (t) {
-          t.tr = Math.hypot(t.x - cx, t.y - cy);
-          t.ta = Math.atan2(t.y - cy, t.x - cx);
-          maxR = Math.max(maxR, t.tr);
-        });
-        var far = Math.hypot(W, H) * 0.5;
-        tiles.forEach(function (t) {
-          t.delay = (t.tr / maxR) * 650 + t.r1 * 520;
-          t.dur = 1500 + t.r2 * 500;
-          t.sr = far * (0.65 + t.r3 * 0.7);
-          t.sa = t.ta - (Math.PI * 1.3 + t.r4 * Math.PI);
-          t.spin = (t.r1 - 0.5) * 12;
-          t.end = t.delay + t.dur;
-          end = Math.max(end, t.end);
-        });
-        return end;
-      },
-      at: function (t, time, o) {
-        var p = (time - t.delay) / t.dur;
-        if (p <= 0) { o.alpha = 0; return; }
-        p = Math.min(p, 1);
-        var e = easeOutCubic(p);
-        var r = t.sr + (t.tr - t.sr) * spring(p);
-        var a = t.sa + (t.ta - t.sa) * e;
-        o.x = W / 2 + Math.cos(a) * r;
-        o.y = H / 2 + Math.sin(a) * r;
-        o.rot = t.rot + t.spin * (1 - e);
-        o.scale = 0.35 + 0.65 * easeOutCubic(Math.min(1, p * 1.4));
-        o.alpha = Math.min(1, p * 5);
-        o.lift = (1 - e) * 1.2;
-        o.glow = p > 0.8 ? 0.3 * Math.sin((p - 0.8) / 0.2 * Math.PI) : 0;
-      }
-    },
-
-    // 3. Pose : comme un mosaïste, chaque tesselle descend vers le mur,
-    //    se presse dans le joint, et la vague avance de gauche à droite.
-    pose: {
-      plan: function () {
-        var end = 0;
-        var minX = 1e9, maxX = -1e9;
-        tiles.forEach(function (t) { minX = Math.min(minX, t.x); maxX = Math.max(maxX, t.x); });
-        var span = Math.max(1, maxX - minX);
-        tiles.forEach(function (t) {
-          var k = (t.x - minX) / span;
-          t.delay = k * 2200 + (t.y / H) * 420 + t.r1 * 260;
-          t.dur = 640;
-          t.spin = (t.r2 - 0.5) * 1.2;
-          t.end = t.delay + t.dur + 250;
-          end = Math.max(end, t.end);
-        });
-        return end;
-      },
-      at: function (t, time, o) {
-        var tau = time - t.delay;
-        if (tau <= 0) { o.alpha = 0; return; }
-        var p = Math.min(1, tau / t.dur);
-        var e = easeOutCubic(p);
-        o.alpha = Math.min(1, p * 2.2);
-        o.scale = 1 + 1.1 * Math.pow(1 - p, 3) - 0.07 * Math.sin(clamp((p - 0.55) / 0.45, 0, 1) * Math.PI);
-        o.x = t.x - (1 - e) * S * 0.8;
-        o.y = t.y - (1 - e) * S * 2.2;
-        o.rot = t.rot + t.spin * (1 - e);
-        o.lift = (1 - e) * 1.6;
-        var after = (tau - t.dur) / 250;
-        o.glow = p < 1 ? 0.45 * Math.pow(p, 4) : 0.45 * Math.max(0, 1 - after);
+        for (var s = 0; s < segs.length; s++) {
+          var e1 = segs[s][0], e2 = segs[s][1], k1 = key(i, j, e1), k2 = key(i, j, e2);
+          if (!pts.has(k1)) pts.set(k1, point(i, j, e1, a, b, c, d));
+          if (!pts.has(k2)) pts.set(k2, point(i, j, e2, a, b, c, d));
+          link(k1, k2);
+        }
       }
     }
-  };
-
-  function planTimings() {
-    totalDuration = MODES[mode].plan();
+    // Assemble les segments en polylignes.
+    var used = new Set(), lines = [];
+    function walk(start, prev, out) {
+      var cur = start, p = prev;
+      for (;;) {
+        var nb = adj.get(cur), next = null;
+        for (var n = 0; n < nb.length; n++) {
+          var cand = nb[n];
+          if (cand !== p && !used.has(edgeId(cur, cand))) { next = cand; break; }
+        }
+        if (next === null) return false;
+        used.add(edgeId(cur, next));
+        if (next === out[0] && out.length > 2) return true; // boucle fermée
+        out.push(next); p = cur; cur = next;
+      }
+    }
+    function edgeId(x, y) { return x < y ? x + ':' + y : y + ':' + x; }
+    adj.forEach(function (nb, k) {
+      for (var n = 0; n < nb.length; n++) {
+        if (used.has(edgeId(k, nb[n]))) continue;
+        used.add(edgeId(k, nb[n]));
+        var fwd = [k, nb[n]];
+        var closed = walk(nb[n], k, fwd);
+        if (!closed) {
+          var back = [k];
+          walk(k, nb[n], back);
+          fwd = back.reverse().concat(fwd.slice(1));
+        }
+        lines.push({ closed: closed, pts: fwd.map(function (kk) { var p = pts.get(kk); return [(p[0] + .5) * G, (p[1] + .5) * G]; }) });
+      }
+    });
+    return lines;
   }
 
-  function play(newMode) {
-    if (newMode) mode = newMode;
-    planTimings();
-    t0 = performance.now() - (reduceMotion ? totalDuration + 1000 : 0);
-    document.querySelectorAll('[data-mode]').forEach(function (b) {
-      b.setAttribute('aria-pressed', b.getAttribute('data-mode') === mode ? 'true' : 'false');
+  function smooth(line) {
+    var p = line.pts, n = p.length;
+    if (n < 4) return p;
+    for (var it = 0; it < 3; it++) {
+      var q = [];
+      for (var i = 0; i < n; i++) {
+        var a = p[line.closed ? (i - 1 + n) % n : Math.max(0, i - 1)];
+        var b = p[i];
+        var c = p[line.closed ? (i + 1) % n : Math.min(n - 1, i + 1)];
+        q.push([(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4]);
+      }
+      p = q;
+    }
+    return p;
+  }
+
+  /* ---------- Placement des tesselles ---------- */
+  var occ, gw, gh;
+
+  function inQuad(q, x, y) {
+    var sign = 0;
+    for (var i = 0; i < 4; i++) {
+      var a = q[i], b = q[(i + 1) % 4];
+      var cr = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]);
+      if (cr !== 0) { if (sign === 0) sign = cr > 0 ? 1 : -1; else if ((cr > 0 ? 1 : -1) !== sign) return false; }
+    }
+    return true;
+  }
+
+  function tryTile(q, mask, minIn, region) {
+    // Refuse les formes vrillées ou trop fines (sur les lignes de crête).
+    var area = 0, sgn = 0;
+    for (var e = 0; e < 4; e++) {
+      var p0 = q[e], p1 = q[(e + 1) % 4], p2 = q[(e + 2) % 4];
+      area += p0[0] * p1[1] - p1[0] * p0[1];
+      var cr = (p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) * (p2[0] - p1[0]);
+      var sg = cr > 0 ? 1 : -1;
+      if (sgn && sg !== sgn) return false;
+      sgn = sg;
+    }
+    if (Math.abs(area) / 2 < ROW * ROW * 0.22) return false;
+    // Échantillonne la tesselle : elle doit être dans sa zone et ne chevaucher personne.
+    var inside = 0, free = 0, total = 0;
+    for (var u = 0.15; u < 0.9; u += 0.35) {
+      for (var v = 0.2; v < 0.9; v += 0.3) {
+        var x = (q[0][0] * (1 - u) + q[1][0] * u) * (1 - v) + (q[3][0] * (1 - u) + q[2][0] * u) * v;
+        var y = (q[0][1] * (1 - u) + q[1][1] * u) * (1 - v) + (q[3][1] * (1 - u) + q[2][1] * u) * v;
+        var gx = (x / G) | 0, gy = (y / G) | 0;
+        total++;
+        if (gx < 0 || gy < 0 || gx >= gw || gy >= gh) continue;
+        if (mask[gy * gw + gx]) inside++;
+        if (!occ[gy * gw + gx]) free++;
+      }
+    }
+    if (inside < total * minIn || free < total * 0.9) return false;
+    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    q.forEach(function (p) { minx = Math.min(minx, p[0]); maxx = Math.max(maxx, p[0]); miny = Math.min(miny, p[1]); maxy = Math.max(maxy, p[1]); });
+    for (var gy2 = Math.max(0, (miny / G) | 0); gy2 <= Math.min(gh - 1, (maxy / G) | 0); gy2++) {
+      for (var gx2 = Math.max(0, (minx / G) | 0); gx2 <= Math.min(gw - 1, (maxx / G) | 0); gx2++) {
+        if (inQuad(q, (gx2 + .5) * G, (gy2 + .5) * G)) occ[gy2 * gw + gx2] = 1;
+      }
+    }
+    var cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+    tiles.push({ q: q, cx: cx, cy: cy, region: region });
+    return true;
+  }
+
+  function jitter(q, amt) {
+    return q.map(function (p) { return [p[0] + (R() - .5) * 2 * amt, p[1] + (R() - .5) * 2 * amt]; });
+  }
+
+  // Pose des rangées de tesselles le long des courbes de niveau d'une zone :
+  // c'est l'« andamento » des mosaïstes, les rangées épousent la forme.
+  function layRows(mask, D, region, lenK) {
+    var maxD = 0;
+    for (var i = 0; i < D.length; i++) if (D[i] > maxD) maxD = D[i];
+    var gap = ROW * 0.14, half = ROW / 2 - gap / 2;
+    for (var level = ROW * 0.5; level < maxD; level += ROW) {
+      var lines = contours(D, gw, gh, level);
+      lines.forEach(function (line) {
+        var p = smooth(line), n = p.length;
+        if (n < 3) return;
+        var acc = [0];
+        for (var i = 1; i < n; i++) acc.push(acc[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+        if (line.closed) acc.push(acc[n - 1] + Math.hypot(p[0][0] - p[n - 1][0], p[0][1] - p[n - 1][1]));
+        var len = acc[acc.length - 1];
+        if (len < ROW * 0.7) return;
+        function at(s) {
+          s = line.closed ? ((s % len) + len) % len : clamp(s, 0, len);
+          var lo = 0, hi = acc.length - 1;
+          while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (acc[mid] <= s) lo = mid; else hi = mid; }
+          var a = p[lo % n], b = p[hi % n], seg = acc[hi] - acc[lo] || 1, t = (s - acc[lo]) / seg;
+          return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        }
+        function normal(s) {
+          var a = at(s - ROW * 0.4), b = at(s + ROW * 0.4), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+          return [-dy / l, dx / l];
+        }
+        var s = line.closed ? R() * ROW : 0;
+        var end = line.closed ? s + len : len;
+        while (s < end - ROW * 0.35) {
+          var L = ROW * lenK * (0.7 + R() * 0.6);
+          var e = Math.min(s + L, end);
+          var sa = s + gap / 2, sb = e - gap / 2;
+          if (sb - sa > ROW * 0.3) {
+            var A = at(sa), B = at(sb), na = normal(sa), nb = normal(sb);
+            var ha = half * (0.9 + R() * 0.12), hb = half * (0.9 + R() * 0.12);
+            var q = jitter([
+              [A[0] + na[0] * ha, A[1] + na[1] * ha], [B[0] + nb[0] * hb, B[1] + nb[1] * hb],
+              [B[0] - nb[0] * hb, B[1] - nb[1] * hb], [A[0] - na[0] * ha, A[1] - na[1] * ha]
+            ], ROW * 0.07);
+            tryTile(q, mask, 0.7, region);
+          }
+          s = e;
+        }
+      });
+    }
+  }
+
+  // Bouche les trous restants avec de petites tesselles taillées sur mesure.
+  function fillGaps(mask, D, region) {
+    var step = Math.max(1, Math.round(ROW / G / 2.5));
+    for (var gy = 0; gy < gh; gy += step) {
+      for (var gx = 0; gx < gw; gx += step) {
+        var k = gy * gw + gx;
+        if (!mask[k] || occ[k]) continue;
+        var dx = (D[k + 1] || 0) - (D[k - 1] || 0), dy = (D[k + gw] || 0) - (D[k - gw] || 0), l = Math.hypot(dx, dy) || 1;
+        var tx = -dy / l, ty = dx / l, nx = dx / l, ny = dy / l;
+        var cx = (gx + .5) * G, cy = (gy + .5) * G;
+        for (var size = 0.8; size >= 0.45; size -= 0.35) {
+          var a = ROW * size * (0.8 + R() * 0.4) / 2, b = ROW * size * 0.85 / 2;
+          var q = jitter([
+            [cx - tx * a + nx * b, cy - ty * a + ny * b], [cx + tx * a + nx * b, cy + ty * a + ny * b],
+            [cx + tx * a - nx * b, cy + ty * a - ny * b], [cx - tx * a - nx * b, cy - ty * a - ny * b]
+          ], ROW * 0.06);
+          if (tryTile(q, mask, 0.55, region)) break;
+        }
+      }
+    }
+  }
+
+  /* ---------- Construction du mur ---------- */
+  function build() {
+    W = window.innerWidth; H = window.innerHeight;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = bed.width = Math.round(W * DPR);
+    canvas.height = bed.height = Math.round(H * DPR);
+    gw = Math.ceil(W / G); gh = Math.ceil(H / G);
+    R = rng(11);
+    tiles = [];
+
+    // 1. Lettres : chaque lettre un peu tournée, décalée, qui chevauche sa voisine.
+    var font = getComputedStyle(document.documentElement).getPropertyValue('--display').trim();
+    var off = document.createElement('canvas'); off.width = gw; off.height = gh;
+    var o = off.getContext('2d', { willReadFrequently: true });
+    var oneLine = W / H > 1.25;
+    var lines = oneLine ? [NAME.join(' ')] : NAME;
+    o.font = '100px ' + font;
+    var widest = Math.max.apply(null, lines.map(function (t) { return o.measureText(t).width * 0.95; }));
+    var fs = Math.min(W * 0.8 / widest * 100, H * (oneLine ? 0.36 : 0.24));
+    ROW = clamp(fs * 0.05, 6, 15);
+    var lr = rng(5), glyphs = [];
+    var lineH = fs * 1.02, top = H / 2 - (lines.length * lineH) / 2 + fs * 0.78 - fs * 0.06;
+    lines.forEach(function (text, li) {
+      o.font = fs + 'px ' + font;
+      var widths = Array.from(text).map(function (ch) { return o.measureText(ch).width * 0.93; });
+      var total = widths.reduce(function (a, b) { return a + b; }, 0);
+      var x = W / 2 - total / 2 + (lines.length > 1 ? (li ? 1 : -1) * fs * 0.12 : 0);
+      Array.from(text).forEach(function (ch, i) {
+        glyphs.push({ ch: ch, x: x + widths[i] / 2, y: top + li * lineH + (lr() - .5) * fs * 0.08,
+                      rot: (lr() - .5) * 0.16, size: fs * (0.95 + lr() * 0.12) });
+        x += widths[i];
+      });
+    });
+    layout = { glyphs: glyphs, font: font };
+    function drawGlyphs(c, scale, stroke) {
+      c.save(); c.scale(scale, scale);
+      c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      glyphs.forEach(function (g) {
+        if (g.ch === ' ') return;
+        c.save(); c.translate(g.x, g.y); c.rotate(g.rot);
+        c.font = g.size + 'px ' + font;
+        if (stroke) c.strokeText(g.ch, 0, 0); else c.fillText(g.ch, 0, 0);
+        c.restore();
+      });
+      c.restore();
+    }
+    o.fillStyle = '#000';
+    drawGlyphs(o, 1 / G);
+    var img = o.getImageData(0, 0, gw, gh).data, N = gw * gh, k;
+    var F = new Uint8Array(N);
+    for (k = 0; k < N; k++) F[k] = img[k * 4 + 3] > 110 ? 1 : 0;
+
+    // 2. Contour sombre autour des lettres.
+    var notF = new Uint8Array(N); for (k = 0; k < N; k++) notF[k] = 1 - F[k];
+    var dOutF = edt(notF, gw, gh);
+    var lineW = ROW * 1.15;
+    var O = new Uint8Array(N), FO = new Uint8Array(N);
+    for (k = 0; k < N; k++) { O[k] = !F[k] && dOutF[k] <= lineW ? 1 : 0; FO[k] = F[k] | O[k]; }
+
+    // 3. Extrusion 3D : la forme est tirée vers le bas à gauche.
+    var depth = fs * 0.12, ex = -0.38, ey = 1, el = Math.hypot(ex, ey);
+    ex = ex / el * depth / G; ey = ey / el * depth / G;
+    var E = new Uint8Array(N), steps = Math.ceil(depth / G);
+    for (var gy = 0; gy < gh; gy++) for (var gx = 0; gx < gw; gx++) {
+      if (!FO[gy * gw + gx]) continue;
+      for (var st = 1; st <= steps; st++) {
+        var x2 = Math.round(gx + ex * st / steps), y2 = Math.round(gy + ey * st / steps);
+        if (x2 >= 0 && y2 >= 0 && x2 < gw && y2 < gh && !FO[y2 * gw + x2]) E[y2 * gw + x2] = 1;
+      }
+    }
+    // 4. Contour extérieur autour de toute la pièce, puis le fond.
+    var notU = new Uint8Array(N); for (k = 0; k < N; k++) notU[k] = FO[k] || E[k] ? 0 : 1;
+    var dOutU = edt(notU, gw, gh);
+    var O2 = new Uint8Array(N), B = new Uint8Array(N);
+    for (k = 0; k < N; k++) { O2[k] = notU[k] && dOutU[k] <= ROW * 0.95 ? 1 : 0; B[k] = notU[k] && !O2[k] ? 1 : 0; }
+
+    occ = new Uint8Array(N);
+    var regions = [
+      { mask: F, name: 'fill', len: 1.15 },
+      { mask: O, name: 'line', len: 1.5 },
+      { mask: E, name: 'depth', len: 1.2 },
+      { mask: O2, name: 'outer', len: 1.6 },
+      { mask: B, name: 'bg', len: 1.05 }
+    ];
+    regions.forEach(function (r) {
+      r.D = edt(r.mask, gw, gh);
+      layRows(r.mask, r.D, r.name, r.len);
+      fillGaps(r.mask, r.D, r.name);
+    });
+
+    // Mesures utiles aux couleurs et à l'animation.
+    var DF = regions[0].D, maxBg = 1;
+    tiles.forEach(function (t) {
+      var gx = clamp((t.cx / G) | 0, 0, gw - 1), gy = clamp((t.cy / G) | 0, 0, gh - 1), kk = gy * gw + gx;
+      t.distBg = t.region === 'bg' ? dOutU[kk] : 0;
+      if (t.region === 'bg') maxBg = Math.max(maxBg, t.distBg);
+      t.edge = t.region === 'fill' && DF[kk] < ROW * 1.05;
+      if (t.edge) {
+        // normale sortante : du côté haut-gauche, la lumière accroche (reflet de bombe).
+        var dx = (DF[kk + 1] || 0) - (DF[kk - 1] || 0), dy = (DF[kk + gw] || 0) - (DF[kk - gw] || 0);
+        t.lit = (dx + dy) / (Math.hypot(dx, dy) || 1) > 0.9;
+      }
+      t.r1 = R(); t.r2 = R(); t.r3 = R(); t.r4 = R();
+    });
+    layout.maxBg = maxBg;
+    layout.fs = fs;
+    layout.drawGlyphs = drawGlyphs;
+    paint();
+    plan();
+  }
+
+  /* ---------- Couleurs ---------- */
+  function paint() {
+    var P = PALETTES[palName];
+    var cr = rng(3), a1 = cr() * 6, a2 = cr() * 6, a3 = cr() * 6;
+    var minY = Infinity, maxY = -Infinity;
+    tiles.forEach(function (t) { if (t.region === 'fill') { minY = Math.min(minY, t.cy); maxY = Math.max(maxY, t.cy); } });
+    tiles.forEach(function (t) {
+      var r = cr(), c;
+      if (t.region === 'fill') {
+        var g = (t.cy - minY) / Math.max(1, maxY - minY);           // dégradé vertical
+        var idx = clamp(Math.floor((g * 0.8 + r * 0.45) * P.fill.length * 0.8), 0, P.fill.length - 1);
+        c = P.fill[idx];
+        if (t.lit && cr() < 0.85) c = pick(P.shine);
+        else if (cr() < 0.05) c = pick(P.speck);                    // quelques éclats de couleur
+      } else if (t.region === 'line') c = P.line[(r * P.line.length) | 0];
+      else if (t.region === 'depth') c = P.depth[(r * P.depth.length) | 0];
+      else if (t.region === 'outer') c = P.outer[(r * P.outer.length) | 0];
+      else {
+        // Nuage de couleur autour de la pièce, qui se dissout dans le mur blanc.
+        var n = (Math.sin(t.cx / W * 7 + a1) + Math.sin(t.cy / H * 5 + a2) + Math.sin((t.cx - t.cy) / (W + H) * 9 + a3)) / 3;
+        var reach = layout.fs * (0.55 + 0.35 * n);
+        var inCloud = t.distBg < reach - ROW * 2 * cr();
+        if (inCloud) {
+          var m = (Math.sin(t.cx / W * 11 + a2) + Math.sin(t.cy / H * 9 + a3)) / 2 * 0.5 + 0.5;
+          c = P.cloud[clamp(Math.floor((m + (cr() - .5) * 0.35) * P.cloud.length), 0, P.cloud.length - 1)];
+        } else {
+          c = STONE[(r * STONE.length) | 0];
+          if (cr() < 0.025) c = pick(P.cloud);
+        }
+      }
+      t.rgb = hex(c);
+      t.tone = (cr() - 0.5) * 0.12;
     });
   }
 
-  /* ---------- Rendu ---------- */
-  var st = {};
+  /* ---------- Animation : les tesselles tombent du spectateur vers le mur ---------- */
+  function plan() {
+    var minX = Infinity, maxX = -Infinity;
+    tiles.forEach(function (t) { if (t.region !== 'bg') { minX = Math.min(minX, t.cx); maxX = Math.max(maxX, t.cx); } });
+    var span = Math.max(1, maxX - minX), last = 0;
+    var order = { line: 0, outer: 0, depth: 120, fill: 260 };
+    tiles.forEach(function (t) {
+      if (t.region === 'bg') {
+        t.delay = 2700 + Math.pow(t.distBg / layout.maxBg, 0.8) * 2000 + t.r1 * 700;
+        t.dur = 520 + t.r2 * 200;
+      } else {
+        var xn = (t.cx - minX) / span;
+        t.delay = 250 + order[t.region] + (xn * 0.6 + t.r1 * 0.4) * 2300;
+        t.dur = 720 + t.r2 * 260;
+      }
+      // D'où vient la tesselle : légèrement décalée, tournée, vue de biais.
+      t.lx = (t.r3 - 0.5) * ROW * 14;
+      t.ly = (t.r4 - 0.5) * ROW * 10 - ROW * 4;
+      t.rot0 = (t.r1 - 0.5) * 2.4;
+      t.tilt0 = 0.5 + t.r2 * 0.75;
+      t.axis = t.r3 * Math.PI;
+      t.placed = false;
+      last = Math.max(last, t.delay + t.dur + 200);
+    });
+    layout.total = last;
+  }
+
+  function drawBedBase() {
+    bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    bctx.fillStyle = GROUT;
+    bctx.fillRect(0, 0, W, H);
+    // Grain du ciment.
+    var gr = rng(9);
+    for (var i = 0; i < W * H / 60; i++) {
+      bctx.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.07)' : 'rgba(40,30,20,.07)';
+      bctx.fillRect(gr() * W, gr() * H, 1 + gr() * 1.5, 1 + gr() * 1.5);
+    }
+    // Le dessin préparatoire du mosaïste, au fusain, sur le ciment.
+    bctx.strokeStyle = 'rgba(40,32,28,.22)';
+    bctx.lineWidth = 1.4;
+    bctx.font = layout.fs + 'px ' + layout.font;
+    layout.drawGlyphs(bctx, 1, true);
+  }
+
+  function tilePath(c, q) {
+    // Polygone aux coins légèrement arrondis, comme une tesselle taillée.
+    var r = ROW * 0.12;
+    c.beginPath();
+    for (var i = 0; i < 4; i++) {
+      var a = q[(i + 3) % 4], b = q[i], d = q[(i + 1) % 4];
+      var m1 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      if (i === 0) c.moveTo(m1[0], m1[1]);
+      c.arcTo(b[0], b[1], (b[0] + d[0]) / 2, (b[1] + d[1]) / 2, r);
+    }
+    c.closePath();
+  }
+
+  function placeOnBed(t) {
+    var q = t.q, c = bctx;
+    // Petite ombre dans le joint, en bas à droite.
+    c.fillStyle = 'rgba(50,40,30,.28)';
+    tilePath(c, q.map(function (p) { return [p[0] + 0.8, p[1] + 1.1]; }));
+    c.fill();
+    var minI = 0, maxI = 0;
+    for (var i = 1; i < 4; i++) {
+      if (q[i][0] + q[i][1] < q[minI][0] + q[minI][1]) minI = i;
+      if (q[i][0] + q[i][1] > q[maxI][0] + q[maxI][1]) maxI = i;
+    }
+    var g = c.createLinearGradient(q[minI][0], q[minI][1], q[maxI][0], q[maxI][1]);
+    g.addColorStop(0, css(t.rgb, t.tone + 0.12));
+    g.addColorStop(0.55, css(t.rgb, t.tone));
+    g.addColorStop(1, css(t.rgb, t.tone - 0.1));
+    c.fillStyle = g;
+    tilePath(c, q);
+    c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.12)';
+    c.lineWidth = 0.6;
+    c.stroke();
+  }
+
+  function drawFlying(t, p, impact) {
+    // h : hauteur de la tesselle au-dessus du mur (1 = contre l'œil, 0 = posée).
+    var h = impact < 0 ? 1 - p * p : 0;
+    var persp = 1 / (1 - h * 0.78);                     // perspective : plus près = plus gros
+    var scale = persp * (impact >= 0 ? 1 - 0.07 * Math.sin(impact * Math.PI) : 1);
+    var cx = W / 2, cy = H / 2;
+    var px = t.cx + (t.cx - cx) * (persp - 1) * 0.28 + t.lx * h;
+    var py = t.cy + (t.cy - cy) * (persp - 1) * 0.28 + t.ly * h;
+    var rot = t.rot0 * h, tilt = Math.cos(t.tilt0 * h);
+    var ca = Math.cos(t.axis), sa = Math.sin(t.axis), cr = Math.cos(rot), sr = Math.sin(rot);
+
+    function tf(pt, ox, oy, k) {
+      var x = pt[0] - t.cx, y = pt[1] - t.cy;
+      var along = x * ca + y * sa, across = -x * sa + y * ca;
+      along *= tilt;                                    // basculement 3D autour de son axe
+      x = along * ca - across * sa; y = along * sa + across * ca;
+      x *= k; y *= k;
+      return [ox + x * cr - y * sr, oy + x * sr + y * cr];
+    }
+    // Ombre portée sur le mur : elle rejoint la tesselle à mesure qu'elle descend.
+    if (h > 0.001) {
+      ctx.globalAlpha = 0.07 + 0.3 * Math.pow(1 - h, 2);
+      ctx.fillStyle = 'rgb(40,30,24)';
+      tilePath(ctx, t.q.map(function (pt) { return tf(pt, t.cx + h * ROW * 3, t.cy + h * ROW * 4.5, 1 + h * 0.8); }));
+      ctx.fill();
+    }
+    var alpha = Math.min(1, p * 4) * (0.45 + 0.55 * (1 - h));
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = css(t.rgb, t.tone);
+    var q = t.q.map(function (pt) { return tf(pt, px, py, scale); });
+    tilePath(ctx, q);
+    ctx.fill();
+    var shade = (1 - Math.abs(tilt)) * 0.45;
+    if (shade > 0.02) { ctx.globalAlpha = alpha * shade; ctx.fillStyle = '#000'; ctx.fill(); }
+    if (impact >= 0 && impact < 0.6) { ctx.globalAlpha = 0.35 * (1 - impact / 0.6); ctx.fillStyle = '#fff'; ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+
+  var IMPACT = 170;
   function frame(now) {
     var time = now - t0;
-    var settled = time > totalDuration;
+    bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    flying.length = 0;
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      if (t.placed) continue;
+      var tau = time - t.delay;
+      if (tau < 0) continue;
+      if (tau > t.dur + IMPACT) { placeOnBed(t); t.placed = true; continue; }
+      flying.push(t);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(bed, 0, 0);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-
-    // Lueur qui balaie le nom en diagonale toutes les ~6 s, une fois posé.
-    var sweep = settled ? ((time - totalDuration) % 6000) / 6000 : -1;
-    var sweepPos = -0.2 + sweep * 2.2;
-    var R = S * 4;
-
-    for (var pass = 0; pass < 2; pass++) {
-      for (var i = 0; i < tiles.length; i++) {
-        var t = tiles[i];
-        st.x = t.x; st.y = t.y; st.rot = t.rot; st.scale = 1; st.alpha = 1; st.lift = 0; st.glow = 0;
-        if (!settled) MODES[mode].at(t, time, st);
-        if (st.alpha <= 0) continue;
-
-        // Survol : les tesselles proches se soulèvent et s'écartent.
-        var tx = 0, ty = 0, tl = 0;
-        if (settled && pointer.active) {
-          var dx = t.x - pointer.x, dy = t.y - pointer.y, d = Math.hypot(dx, dy) || 1;
-          var f = Math.exp(-(d * d) / (R * R));
-          tx = dx / d * f * S * 0.7; ty = dy / d * f * S * 0.7; tl = f;
-        }
-        if (pass === 0) {
-          t.hx += (tx - t.hx) * 0.16; t.hy += (ty - t.hy) * 0.16; t.hl += (tl - t.hl) * 0.16;
-        }
-        st.x += t.hx; st.y += t.hy; st.lift += t.hl * 0.9; st.scale *= 1 + t.hl * 0.22;
-        st.rot += t.hl * (t.r3 - 0.5) * 0.5;
-
-        if (sweep >= 0) {
-          var diag = (t.x / W) * 0.75 + (t.y / H) * 0.25;
-          var dd = (diag - sweepPos) / 0.07;
-          st.glow += 0.32 * Math.exp(-dd * dd);
-        }
-
-        var size = S * st.scale;
-        var cos = Math.cos(st.rot) * size, sin = Math.sin(st.rot) * size;
-        var c = t.corners;
-
-        if (pass === 0) {
-          // Ombre portée : plus la tesselle est haute, plus l'ombre est décalée et légère.
-          var off = 1 + st.lift * S * 0.6;
-          ctx.globalAlpha = st.alpha * (0.32 - Math.min(0.2, st.lift * 0.1));
-          ctx.fillStyle = 'rgb(' + shadowRGB + ')';
-          quad(c, st.x + off * 0.5, st.y + off, cos, sin, 1.04);
-          ctx.fill();
-          continue;
-        }
-
-        ctx.globalAlpha = st.alpha;
-        ctx.fillStyle = t.fill;
-        quad(c, st.x, st.y, cos, sin, 1);
-        ctx.fill();
-        // Facette claire en haut à gauche : le reflet de l'émail.
-        ctx.fillStyle = t.facet;
-        ctx.globalAlpha = st.alpha * 0.55;
-        ctx.beginPath();
-        pt(c[0], st.x, st.y, cos, sin, 1, true);
-        pt(c[1], st.x, st.y, cos, sin, 1);
-        pt(c[3], st.x, st.y, cos, sin, 1);
-        ctx.closePath();
-        ctx.fill();
-        // Arête sombre en bas à droite.
-        ctx.strokeStyle = t.edge;
-        ctx.globalAlpha = st.alpha * 0.5;
-        ctx.lineWidth = Math.max(0.6, S * 0.06);
-        ctx.beginPath();
-        pt(c[1], st.x, st.y, cos, sin, 1, true);
-        pt(c[2], st.x, st.y, cos, sin, 1);
-        pt(c[3], st.x, st.y, cos, sin, 1);
-        ctx.stroke();
-        if (st.glow > 0.01) {
-          ctx.globalAlpha = Math.min(1, st.glow) * st.alpha;
-          ctx.fillStyle = '#fff';
-          quad(c, st.x, st.y, cos, sin, 1);
-          ctx.fill();
-        }
+    if (flying.length) {
+      // Les plus hautes (les plus proches de l'œil) sont dessinées en dernier.
+      flying.sort(function (a, b) { return (time - b.delay) / b.dur - (time - a.delay) / a.dur; });
+      for (var j = 0; j < flying.length; j++) {
+        var f = flying[j], tt = time - f.delay;
+        if (tt <= f.dur) drawFlying(f, tt / f.dur, -1);
+        else drawFlying(f, 1, (tt - f.dur) / IMPACT);
       }
     }
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(frame);
+    if (time < layout.total + 300) requestAnimationFrame(frame);
+    else running = false;
   }
 
-  function pt(p, x, y, cos, sin, k, move) {
-    var px = x + (p[0] * cos - p[1] * sin) * k;
-    var py = y + (p[0] * sin + p[1] * cos) * k;
-    if (move) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-  }
-  function quad(c, x, y, cos, sin, k) {
-    ctx.beginPath();
-    pt(c[0], x, y, cos, sin, k, true);
-    pt(c[1], x, y, cos, sin, k);
-    pt(c[2], x, y, cos, sin, k);
-    pt(c[3], x, y, cos, sin, k);
-    ctx.closePath();
+  function play() {
+    drawBedBase();
+    tiles.forEach(function (t) { t.placed = false; });
+    if (reduceMotion) {
+      tiles.forEach(function (t) { placeOnBed(t); t.placed = true; });
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(bed, 0, 0);
+      return;
+    }
+    t0 = performance.now();
+    if (!running) { running = true; requestAnimationFrame(frame); }
   }
 
   /* ---------- Commandes ---------- */
-  document.querySelectorAll('[data-mode]').forEach(function (b) {
-    b.addEventListener('click', function () { play(b.getAttribute('data-mode')); });
+  document.querySelectorAll('[data-pal]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      palName = b.getAttribute('data-pal');
+      document.querySelectorAll('[data-pal]').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      paint();
+      play();
+    });
   });
-  document.getElementById('replay').addEventListener('click', function () { play(); });
+  document.getElementById('rejouer').addEventListener('click', play);
   window.addEventListener('keydown', function (e) {
-    if (e.key === '1') play('chute');
-    else if (e.key === '2') play('tourbillon');
-    else if (e.key === '3') play('pose');
-    else if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
+    if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
   });
-  canvas.addEventListener('pointermove', function (e) {
-    var r = canvas.getBoundingClientRect();
-    pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top; pointer.active = true;
-  });
-  canvas.addEventListener('pointerleave', function () { pointer.active = false; });
-  canvas.addEventListener('pointerdown', function (e) {
-    var r = canvas.getBoundingClientRect();
-    pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top; pointer.active = true;
-  });
-
-  var resizeTimer;
+  var resizeTimer, lastW = 0, lastH = 0;
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-      var wasDone = performance.now() - t0 > totalDuration;
-      build();
-      if (wasDone) t0 = performance.now() - totalDuration - 1;
-    }, 150);
+      if (Math.abs(window.innerWidth - lastW) < 2 && Math.abs(window.innerHeight - lastH) < 60) return;
+      lastW = window.innerWidth; lastH = window.innerHeight;
+      build(); play();
+    }, 250);
   });
 
-  function start() {
-    build();
-    play();
-    requestAnimationFrame(frame);
-  }
+  function start() { lastW = window.innerWidth; lastH = window.innerHeight; build(); play(); }
   var started = false;
   function go() { if (!started) { started = true; start(); } }
   if (document.fonts && document.fonts.load) {
-    document.fonts.load('100px "Archivo Black"').then(go, go);
-    setTimeout(go, 1800);
-  } else {
-    go();
-  }
+    document.fonts.load('100px "Knewave"').then(go, go);
+    setTimeout(go, 2000);
+  } else go();
 })();
 </script>
