@@ -1,18 +1,18 @@
 <title>Galvez Martin en mosaïque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
 <style>
-  /* Une seule scène : un pavement grec, une bordure à grecque, le nom posé en éclats. */
+  /* Une seule scène : un mur de briques violet, le nom en pièce de graffiti posée en trencadís. */
   :root {
-    --floor: #ece4d3;
-    --panel: rgba(30, 46, 62, .82);
-    --panel-ink: #f5efe3;
+    --wall: #5b3fb3;
+    --panel: rgba(24, 18, 52, .82);
+    --panel-ink: #f6f1ea;
     --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
-    color-scheme: light;
+    color-scheme: dark;
   }
   html, body { height: 100%; }
-  body { margin: 0; background: var(--floor); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
+  body { margin: 0; background: var(--wall); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   .controls {
     position: fixed; left: 50%; transform: translateX(-50%);
@@ -28,35 +28,37 @@
   .controls button:focus-visible { outline: 2px solid var(--panel-ink); outline-offset: 1px; }
 </style>
 
-<canvas id="mur" role="img" aria-label="Galvez Martin, en mosaïque à la grecque"></canvas>
+<canvas id="mur" role="img" aria-label="GALVEZ MARTIN, pièce de graffiti posée en mosaïque"></canvas>
 <div class="controls"><button type="button" id="rejouer">↻ Rejouer</button></div>
 
 <script>
 (function () {
   'use strict';
 
-  /* ---------- Palette : bleus et verts de Provence, fond de pierre calcaire ---------- */
-  var BLUES = ['#2e5f94', '#264f7d', '#3b75ad', '#4f87bd', '#1f416a', '#6a9ccc'];
-  var GREENS = ['#5f7d3a', '#6e8a3e', '#4f6b30', '#7f9c5a', '#4f7a63', '#8fb39a'];
-  var STONE = ['#efe7d6', '#ebe2cf', '#f3ecdf', '#e6dcc6', '#f0e9da'];
-  var GROUT = '#cdbfa6';
-  var LETTER_GROUT = '#2a3036';
-  var FRAME_BLUE = ['#2e5f94', '#2a5788', '#34679c'];
-  var FRAME_GREEN = ['#6e8a3e', '#647f37', '#78944a'];
+  /* ---------- Palette, relevée sur la mosaïque de référence ---------- */
+  var FILL = ['#b9cdf1', '#aac2ec', '#c7d7f4', '#9fb8e7', '#d2def6', '#b1c7ee', '#a3bbe9'];
+  var SHINE = ['#ffffff', '#f4f7fd', '#eef3fc'];
+  var NAVY = ['#1d1b5e', '#231f6e', '#191652', '#2a2479'];
+  var DEPTH = ['#7a6cc4', '#6a5bb8', '#8b7fd0', '#5b4ea6', '#9a8fdc', '#6f63bd', '#4d4396'];
+  var PEACH = ['#f6c9a8', '#f3bd98', '#f8d3b6', '#efb48c', '#f5c4a0'];
+  var PATCH = [['#2fb3a3', '#3cc2b0', '#27a294'], ['#f3a54e', '#f0b062'], ['#f2c84b', '#eec04a'], ['#a9cf7a', '#9cc66c']];
+  var GROUT = '#dcd6cc';
+  var WALL = '#5b3fb3';
 
-  // Grecque : une spirale par période de 6 tesselles, sur 5 rangs.
-  var KEY = ['XXXXX.', 'X...X.', 'X.XXX.', 'X.....', 'XXXXXX'];
+  var FONT = '"Bowlby One", "Arial Black", sans-serif';
+  var NAME = ['GALVEZ', 'MARTIN'];
+  var V = { tol: 0.018, spike: 0.1, spikeAngle: 118 };   // taille en pointes des angles
 
   var canvas = document.getElementById('mur');
   var ctx = canvas.getContext('2d');
   var bed = document.createElement('canvas');
   var bctx = bed.getContext('2d');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var W, H, DPR, FS, T, GAP;
-  var pieces = [], info = {}, frame = null;
+  var W, H, DPR, G = 2, gw, gh, FS, GAP;
+  var pieces = [], info = {}, mortar = null;
   var t0 = 0, running = false;
 
-  /* ---------- Outils ---------- */
+  /* ---------- Hasard reproductible ---------- */
   function rng(seed) {
     return function () {
       seed |= 0; seed = seed + 0x6D2B79F5 | 0;
@@ -66,323 +68,543 @@
     };
   }
   var R = rng(1);
-  function pick(a) { return a[(R() * a.length) | 0]; }
-  function inPoly(p, x, y) {
-    var c = false;
-    for (var i = 0, j = p.length - 1; i < p.length; j = i++) {
-      var a = p[i], b = p[j];
-      if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
-    }
-    return c;
+  function pick(arr) { return arr[(R() * arr.length) | 0]; }
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function hex(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  function css(c, k) {
+    k = k || 0;
+    var t = k > 0 ? 255 : 0, a = Math.abs(k);
+    return 'rgb(' + ((c[0] + (t - c[0]) * a) | 0) + ',' + ((c[1] + (t - c[1]) * a) | 0) + ',' + ((c[2] + (t - c[2]) * a) | 0) + ')';
   }
-  // Coupe un polygone convexe par une droite (point + direction) : deux polygones convexes.
-  function cut(poly, px, py, dx, dy) {
-    var A = [], B = [], n = poly.length;
-    function side(v) { return (v[0] - px) * dy - (v[1] - py) * dx; }
-    for (var i = 0; i < n; i++) {
-      var a = poly[i], b = poly[(i + 1) % n], sa = side(a), sb = side(b);
-      if (sa >= 0) A.push(a); else B.push(a);
-      if ((sa >= 0) !== (sb >= 0)) {
-        var t = sa / (sa - sb), m = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-        A.push(m); B.push(m);
+
+  /* ---------- Transformée de distance euclidienne exacte (Felzenszwalb) ---------- */
+  var BIG = 1e12;
+  function edt(inside, w, h) {
+    // Pour chaque case « dedans », distance à la case « dehors » la plus proche.
+    var f = new Float64Array(Math.max(w, h)), d = new Float64Array(Math.max(w, h));
+    var v = new Int32Array(Math.max(w, h)), z = new Float64Array(Math.max(w, h) + 1);
+    var grid = new Float64Array(w * h), out = new Float32Array(w * h), x, y, n;
+    for (var i = 0; i < w * h; i++) grid[i] = inside[i] ? BIG : 0;
+    function pass(n) {
+      var k = 0, q, s;
+      v[0] = 0; z[0] = -BIG; z[1] = BIG;
+      for (q = 1; q < n; q++) {
+        s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+        while (s <= z[k]) { k--; s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+        k++; v[k] = q; z[k] = s; z[k + 1] = BIG;
       }
+      k = 0;
+      for (q = 0; q < n; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
     }
-    return [A, B];
-  }
-  // Recule chaque côté d'un polygone convexe de d (joint entre éclats).
-  function inset(p, d) {
-    var n = p.length, s = 0, out = [], lines = [], i;
-    for (i = 0; i < n; i++) { var a = p[i], b = p[(i + 1) % n]; s += a[0] * b[1] - b[0] * a[1]; }
-    var dir = s > 0 ? 1 : -1;
-    for (i = 0; i < n; i++) {
-      var a2 = p[i], b2 = p[(i + 1) % n], dx = b2[0] - a2[0], dy = b2[1] - a2[1], l = Math.hypot(dx, dy) || 1;
-      lines.push([a2[0] - dy / l * dir * d, a2[1] + dx / l * dir * d, dx, dy]);
+    for (x = 0; x < w; x++) {
+      for (y = 0; y < h; y++) f[y] = grid[y * w + x];
+      pass(h);
+      for (y = 0; y < h; y++) grid[y * w + x] = d[y];
     }
-    for (i = 0; i < n; i++) {
-      var L1 = lines[(i - 1 + n) % n], L2 = lines[i], den = L1[2] * L2[3] - L1[3] * L2[2];
-      if (Math.abs(den) < 1e-9) { out.push([L2[0], L2[1]]); continue; }
-      var t = ((L2[0] - L1[0]) * L2[3] - (L2[1] - L1[1]) * L2[2]) / den;
-      out.push([L1[0] + L1[2] * t, L1[1] + L1[3] * t]);
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) f[x] = grid[y * w + x];
+      pass(w);
+      for (x = 0; x < w; x++) out[y * w + x] = Math.sqrt(d[x]) * G;
     }
     return out;
   }
 
-  /* ---------- Mise en page : le nom, puis le cadre autour ---------- */
-  function font(italic, size) { return (italic ? 'italic ' : '') + '400 ' + size + 'px "Instrument Serif", "Times New Roman", serif'; }
-
-  function layout() {
-    var m = document.createElement('canvas').getContext('2d');
-    T = Math.round(Math.max(6, Math.min(12, Math.min(W, H) * 0.013)));   // tesselle du pavement
-    var band = 9 * T, margin = 16, bottomUI = 70;
-    var availW = W - 2 * margin - 2 * band, availH = H - margin - bottomUI - 2 * band;
-    var words = [{ t: 'Galvez', it: false }, { t: 'Martin', it: true }];
-    function width(wd, size) { m.font = font(wd.it, size); return m.measureText(wd.t).width; }
-    var space = 0.22;
-    var oneW = width(words[0], 100) + width(words[1], 100) + space * 100;
-    var twoW = Math.max(width(words[0], 100), width(words[1], 100));
-    var padX = 0.32, padY = 0.3;                                   // marges intérieures, en hauteur de lettre
-    var fsOne = Math.min(availW / (oneW / 100 + 2 * padX), availH / (0.95 + 2 * padY));
-    var fsTwo = Math.min(availW / (twoW / 100 + 2 * padX), availH / (1.85 + 2 * padY));
-    var two = fsTwo > fsOne * 1.25;
-    FS = Math.min(two ? fsTwo : fsOne, 230);
-    GAP = Math.max(2.5, FS * 0.022);
-
-    // Position de chaque lettre.
-    var glyphs = [];
-    var lines = two ? [[words[0]], [words[1]]] : [[words[0], words[1]]];
-    var lineH = FS * 0.95, blockH = lines.length * lineH;
-    var baseY = H / 2 - bottomUI / 2 + margin / 2 - blockH / 2 + FS * 0.74;
-    lines.forEach(function (line, li) {
-      var total = line.reduce(function (s, wd, i) { return s + width(wd, FS) + (i ? space * FS : 0); }, 0);
-      var x = W / 2 - total / 2;
-      line.forEach(function (wd, wi) {
-        if (wi) x += space * FS;
-        m.font = font(wd.it, FS);
-        // On place les lettres une à une, en gardant l'approche du mot.
-        Array.from(wd.t).forEach(function (ch, ci) {
-          var before = m.measureText(wd.t.slice(0, ci)).width;
-          var mt = m.measureText(ch);
-          glyphs.push({ ch: ch, it: wd.it, x: x + before, y: baseY + li * lineH, m: mt, word: wd.it ? 1 : 0 });
-        });
-        x += width(wd, FS);
-      });
-    });
-
-    // Cadre aligné sur la grille des tesselles.
-    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    glyphs.forEach(function (g) {
-      minX = Math.min(minX, g.x - g.m.actualBoundingBoxLeft); maxX = Math.max(maxX, g.x + g.m.actualBoundingBoxRight);
-      minY = Math.min(minY, g.y - g.m.actualBoundingBoxAscent); maxY = Math.max(maxY, g.y + g.m.actualBoundingBoxDescent);
-    });
-    var innerW = (maxX - minX) + 2 * padX * FS, innerH = (maxY - minY) + 2 * padY * FS;
-    var cols = Math.ceil(innerW / T / 6) * 6, rows = Math.ceil(innerH / T / 6) * 6;  // périodes entières de grecque
-    var gx = Math.round(((minX + maxX) / 2) / T - cols / 2) - 9;
-    var gy = Math.round(((minY + maxY) / 2) / T - rows / 2) - 9;
-    frame = { L: gx, T: gy, R: gx + cols + 17, B: gy + rows + 17 };
-    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: (maxX - minX) / 2, ry: (maxY - minY) / 2 };
-    return glyphs;
-  }
-
-  /* ---------- Pavement et bordure ---------- */
-  function frameColor(i, j) {
-    var f = frame;
-    if (i < f.L || i > f.R || j < f.T || j > f.B) return null;
-    var dl = i - f.L, dr = f.R - i, dt = j - f.T, db = f.B - j;
-    var u = Math.min(dl, dr), v = Math.min(dt, db);
-    if (u >= 9 && v >= 9) return null;
-    if (u < 9 && v < 9) {                                // coins : carré concentrique
-      if (u === 0 || v === 0 || u === 8 || v === 8) return pick(FRAME_GREEN);
-      if (u >= 2 && u <= 6 && v >= 2 && v <= 6 && (u === 2 || u === 6 || v === 2 || v === 6 || (u === 4 && v === 4))) return pick(FRAME_BLUE);
-      return null;
+  /* ---------- Courbes de niveau (marching squares) ---------- */
+  var CASES = [[], [[3, 0]], [[0, 1]], [[3, 1]], [[1, 2]], null, [[0, 2]], [[2, 3]],
+               [[2, 3]], [[0, 2]], null, [[1, 2]], [[3, 1]], [[0, 1]], [[3, 0]], []];
+  function contours(D, w, h, level) {
+    var pts = new Map(), adj = new Map();
+    function key(i, j, e) {
+      // arête haute/basse : horizontale ; gauche/droite : verticale
+      if (e === 0) return (j * w + i) * 2;
+      if (e === 2) return ((j + 1) * w + i) * 2;
+      if (e === 3) return (j * w + i) * 2 + 1;
+      return (j * w + i + 1) * 2 + 1;
     }
-    var r, k;
-    if (v < 9) { r = v; k = (i - (f.L + 9)) % 6; } else { r = u; k = (j - (f.T + 9)) % 6; }
-    if (r === 0 || r === 8) return pick(FRAME_GREEN);
-    if (r >= 2 && r <= 6 && KEY[r - 2][(k + 6) % 6] === 'X') return pick(FRAME_BLUE);
-    return null;
-  }
-
-  function drawFloor() {
-    var c = bctx, gr = rng(4);
-    var saved = R; R = gr;
-    c.setTransform(DPR, 0, 0, DPR, 0, 0);
-    c.fillStyle = GROUT;
-    c.fillRect(0, 0, W, H);
-    var cols = Math.ceil(W / T) + 1, rows = Math.ceil(H / T) + 1, g = Math.max(1, T * 0.14);
-    for (var j = 0; j < rows; j++) {
-      for (var i = 0; i < cols; i++) {
-        var col = frameColor(i, j) || pick(STONE);
-        var jx = (gr() - 0.5) * T * 0.12, jy = (gr() - 0.5) * T * 0.12, s = T - g;
-        c.fillStyle = col;
-        c.fillRect(i * T + g / 2 + jx, j * T + g / 2 + jy, s * (0.92 + gr() * 0.08), s * (0.92 + gr() * 0.08));
+    function point(i, j, e, a, b, c, d) {
+      var t;
+      if (e === 0) { t = (level - a) / (b - a); return [i + t, j]; }
+      if (e === 1) { t = (level - b) / (c - b); return [i + 1, j + t]; }
+      if (e === 2) { t = (level - d) / (c - d); return [i + t, j + 1]; }
+      t = (level - a) / (d - a); return [i, j + t];
+    }
+    function link(k1, k2) {
+      (adj.get(k1) || adj.set(k1, []).get(k1)).push(k2);
+      (adj.get(k2) || adj.set(k2, []).get(k2)).push(k1);
+    }
+    for (var j = 0; j < h - 1; j++) {
+      for (var i = 0; i < w - 1; i++) {
+        var a = D[j * w + i], b = D[j * w + i + 1], c = D[(j + 1) * w + i + 1], d = D[(j + 1) * w + i];
+        var idx = (a >= level ? 1 : 0) | (b >= level ? 2 : 0) | (c >= level ? 4 : 0) | (d >= level ? 8 : 0);
+        if (idx === 0 || idx === 15) continue;
+        var segs = CASES[idx];
+        if (!segs) {
+          var centre = (a + b + c + d) / 4 >= level;
+          segs = idx === 5 ? (centre ? [[0, 1], [2, 3]] : [[3, 0], [1, 2]])
+                           : (centre ? [[3, 0], [1, 2]] : [[0, 1], [2, 3]]);
+        }
+        for (var s = 0; s < segs.length; s++) {
+          var e1 = segs[s][0], e2 = segs[s][1], k1 = key(i, j, e1), k2 = key(i, j, e2);
+          if (!pts.has(k1)) pts.set(k1, point(i, j, e1, a, b, c, d));
+          if (!pts.has(k2)) pts.set(k2, point(i, j, e2, a, b, c, d));
+          link(k1, k2);
+        }
       }
     }
-    R = saved;
+    // Assemble les segments en polylignes.
+    var used = new Set(), lines = [];
+    function walk(start, prev, out) {
+      var cur = start, p = prev;
+      for (;;) {
+        var nb = adj.get(cur), next = null;
+        for (var n = 0; n < nb.length; n++) {
+          var cand = nb[n];
+          if (cand !== p && !used.has(edgeId(cur, cand))) { next = cand; break; }
+        }
+        if (next === null) return false;
+        used.add(edgeId(cur, next));
+        if (next === out[0] && out.length > 2) return true; // boucle fermée
+        out.push(next); p = cur; cur = next;
+      }
+    }
+    function edgeId(x, y) { return x < y ? x + ':' + y : y + ':' + x; }
+    adj.forEach(function (nb, k) {
+      for (var n = 0; n < nb.length; n++) {
+        if (used.has(edgeId(k, nb[n]))) continue;
+        used.add(edgeId(k, nb[n]));
+        var fwd = [k, nb[n]];
+        var closed = walk(nb[n], k, fwd);
+        if (!closed) {
+          var back = [k];
+          walk(k, nb[n], back);
+          fwd = back.reverse().concat(fwd.slice(1));
+        }
+        lines.push({ closed: closed, pts: fwd.map(function (kk) { var p = pts.get(kk); return [(p[0] + .5) * G, (p[1] + .5) * G]; }) });
+      }
+    });
+    return lines;
   }
 
-  /* ---------- Les lettres découpées en 3 ou 4 éclats ---------- */
+  function smooth(line) {
+    var p = line.pts, n = p.length;
+    if (n < 4) return p;
+    for (var it = 0; it < 3; it++) {
+      var q = [];
+      for (var i = 0; i < n; i++) {
+        var a = p[line.closed ? (i - 1 + n) % n : Math.max(0, i - 1)];
+        var b = p[i];
+        var c = p[line.closed ? (i + 1) % n : Math.min(n - 1, i + 1)];
+        q.push([(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4]);
+      }
+      p = q;
+    }
+    return p;
+  }
+
+  function rdp(pts, tol) {
+    if (pts.length < 3) return pts.slice();
+    var a = pts[0], b = pts[pts.length - 1], dmax = 0, idx = 0;
+    var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    for (var i = 1; i < pts.length - 1; i++) {
+      var d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + b[0] * a[1] - b[1] * a[0]) / l;
+      if (d > dmax) { dmax = d; idx = i; }
+    }
+    if (dmax <= tol) return [a, b];
+    var left = rdp(pts.slice(0, idx + 1), tol), right = rdp(pts.slice(idx), tol);
+    return left.slice(0, -1).concat(right);
+  }
+  function rdpLoop(pts, tol) {
+    var far = 0, dm = 0;
+    for (var i = 1; i < pts.length; i++) {
+      var d = Math.hypot(pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]);
+      if (d > dm) { dm = d; far = i; }
+    }
+    var a = rdp(pts.slice(0, far + 1), tol), b = rdp(pts.slice(far).concat([pts[0]]), tol);
+    return a.slice(0, -1).concat(b.slice(0, -1));
+  }
+
+  function sharpen(F, V, fs) {
+    var Ff = new Float32Array(F.length);
+    for (var k = 0; k < F.length; k++) Ff[k] = F[k];
+    var loops = contours(Ff, gw, gh, 0.5).filter(function (l) { return l.pts.length > 6; });
+    var c = document.createElement('canvas'); c.width = gw; c.height = gh;
+    var x = c.getContext('2d', { willReadFrequently: true });
+    function inside(px, py) {
+      var gx = (px / G) | 0, gy = (py / G) | 0;
+      return gx >= 0 && gy >= 0 && gx < gw && gy < gh && F[gy * gw + gx];
+    }
+    x.beginPath();
+    loops.forEach(function (l) {
+      var p = rdpLoop(l.pts, fs * V.tol), n = p.length;
+      if (n < 3) return;
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var a = p[(i - 1 + n) % n], v = p[i], b = p[(i + 1) % n];
+        var ax = a[0] - v[0], ay = a[1] - v[1], bx = b[0] - v[0], by = b[1] - v[1];
+        var la = Math.hypot(ax, ay) || 1, lb = Math.hypot(bx, by) || 1;
+        var ang = Math.acos(clamp((ax * bx + ay * by) / (la * lb), -1, 1)) * 180 / Math.PI;
+        var mx = ax / la + bx / lb, my = ay / la + by / lb, ml = Math.hypot(mx, my) || 1;
+        mx /= ml; my /= ml;
+        // Coin saillant (le dedans de l'angle est plein) : on l'étire en pointe.
+        if (ang < V.spikeAngle && inside(v[0] + mx * 3, v[1] + my * 3)) {
+          var len = fs * V.spike * Math.pow(1 - ang / V.spikeAngle, 0.7) * (0.6 + R() * 0.8);
+          out.push([v[0] - mx * len, v[1] - my * len]);
+        } else out.push(v);
+      }
+      x.moveTo(out[0][0] / G, out[0][1] / G);
+      for (var j = 1; j < out.length; j++) x.lineTo(out[j][0] / G, out[j][1] / G);
+      x.closePath();
+    });
+    x.fillStyle = '#000';
+    x.fill('evenodd');
+    var img = x.getImageData(0, 0, gw, gh).data, S2 = new Uint8Array(F.length);
+    for (k = 0; k < F.length; k++) S2[k] = img[k * 4 + 3] > 110 ? 1 : 0;
+    return S2;
+  }
+
+
+  /* ---------- Pavage en éclats irréguliers (trencadís) ----------
+     Des graines sont semées dans une zone ; chaque case de la grille rejoint la
+     graine la plus proche ; l'enveloppe de chaque groupe donne un éclat. */
+  function hull(pts) {
+    var p = pts.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    function cross(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+    var lo = [], up = [];
+    p.forEach(function (q) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); });
+    p.slice().reverse().forEach(function (q) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); });
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+  function polyArea(v) {
+    var a = 0;
+    for (var i = 0; i < v.length; i++) { var p = v[i], q = v[(i + 1) % v.length]; a += p[0] * q[1] - q[0] * p[1]; }
+    return Math.abs(a) / 2;
+  }
+  function centroid(p) { var x = 0, y = 0; p.forEach(function (q) { x += q[0]; y += q[1]; }); return [x / p.length, y / p.length]; }
+  function shrink(p, g) {
+    var c = centroid(p);
+    return p.map(function (v) {
+      var dx = v[0] - c[0], dy = v[1] - c[1], l = Math.hypot(dx, dy) || 1, k = Math.max(0, l - g) / l;
+      return [c[0] + dx * k, c[1] + dy * k];
+    });
+  }
+
+  function pave(mask, size, regular, kind) {
+    size = Math.max(size, 6);
+    // 1. Graines : grille secouée (régulière pour la 3D, très irrégulière ailleurs).
+    var cell = size / G, jit = regular ? 0.25 : 0.95, seeds = [];
+    var bw = Math.ceil(gw / cell) + 1, bh = Math.ceil(gh / cell) + 1, buckets = new Array(bw * bh);
+    for (var by = 0; by < bh; by++) for (var bx = 0; bx < bw; bx++) {
+      var sx = (bx + 0.5 + (R() - 0.5) * jit) * cell, sy = (by + 0.5 + (R() - 0.5) * jit) * cell;
+      var ix = sx | 0, iy = sy | 0;
+      if (ix < 0 || iy < 0 || ix >= gw || iy >= gh || !mask[iy * gw + ix]) continue;
+      var id = seeds.length;
+      seeds.push({ x: sx, y: sy, pts: [] });
+      buckets[by * bw + bx] = (buckets[by * bw + bx] || []).concat([id]);
+    }
+    if (!seeds.length) return;
+    // 2. Chaque case rejoint la graine la plus proche.
+    for (var y = 0; y < gh; y++) for (var x = 0; x < gw; x++) {
+      if (!mask[y * gw + x]) continue;
+      var cbx = (x / cell) | 0, cby = (y / cell) | 0, best = -1, bd = Infinity;
+      for (var oy = -2; oy <= 2; oy++) for (var ox = -2; ox <= 2; ox++) {
+        var b = buckets[(cby + oy) * bw + (cbx + ox)];
+        if (cbx + ox < 0 || cbx + ox >= bw || !b) continue;
+        for (var n = 0; n < b.length; n++) {
+          var s = seeds[b[n]], d = (s.x - x) * (s.x - x) + (s.y - y) * (s.y - y);
+          if (d < bd) { bd = d; best = b[n]; }
+        }
+      }
+      if (best >= 0) seeds[best].pts.push([(x + 0.5) * G, (y + 0.5) * G]);
+    }
+    // 3. Un éclat par graine : enveloppe simplifiée, coins secoués, joint.
+    seeds.forEach(function (s) {
+      if (s.pts.length < 3) return;
+      var h = hull(s.pts);
+      if (h.length < 3) return;
+      // élargit d'une demi-case (les points sont des centres de cases)
+      var c0 = centroid(h);
+      h = h.map(function (v) { var dx = v[0] - c0[0], dy = v[1] - c0[1], l = Math.hypot(dx, dy) || 1; return [v[0] + dx / l * G * 0.5, v[1] + dy / l * G * 0.5]; });
+      if (h.length > 4) h = rdpLoop(h.concat(), G * 0.9);
+      if (h.length < 3) return;
+      h = h.map(function (v) { return [v[0] + (R() - 0.5) * size * 0.06, v[1] + (R() - 0.5) * size * 0.06]; });
+      var q = shrink(h, GAP / 2);
+      if (polyArea(q) < size * size * 0.04) return;
+      pieces.push({ q: q, c: centroid(q), kind: kind });
+    });
+  }
+
+  /* ---------- Construction de la pièce ---------- */
   function build() {
     W = window.innerWidth; H = window.innerHeight;
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = bed.width = Math.round(W * DPR);
     canvas.height = bed.height = Math.round(H * DPR);
-    R = rng(31);
+    gw = Math.ceil(W / G); gh = Math.ceil(H / G);
+    R = rng(17);
     pieces = [];
-    var glyphs = layout();
-    var tIn = Math.max(4, FS * 0.032);                     // tesselles à l'intérieur des lettres
+    var N = gw * gh, k;
 
-    glyphs.forEach(function (g, gi) {
-      var pad = FS * 0.06;
-      var x0 = Math.floor(g.x - g.m.actualBoundingBoxLeft - pad), y0 = Math.floor(g.y - g.m.actualBoundingBoxAscent - pad);
-      var x1 = Math.ceil(g.x + g.m.actualBoundingBoxRight + pad), y1 = Math.ceil(g.y + g.m.actualBoundingBoxDescent + pad);
-      var w = x1 - x0, h = y1 - y0;
-
-      // Masque de la lettre, pour savoir où est l'encre.
-      var mk = document.createElement('canvas'); mk.width = w; mk.height = h;
-      var mc = mk.getContext('2d', { willReadFrequently: true });
-      mc.font = font(g.it, FS); mc.fillStyle = '#000';
-      mc.fillText(g.ch, g.x - x0, g.y - y0);
-      var data = mc.getImageData(0, 0, w, h).data;
-      var ink = [];
-      for (var yy = 0; yy < h; yy += 2) for (var xx = 0; xx < w; xx += 2) if (data[(yy * w + xx) * 4 + 3] > 100) ink.push([xx + x0, yy + y0]);
-      function inkIn(poly) { var n = 0; ink.forEach(function (p) { if (inPoly(poly, p[0], p[1])) n++; }); return n; }
-
-      // Coupes droites successives à travers la lettre.
-      var want = R() < 0.5 ? 3 : 4;
-      var cells = [[[x0, y0], [x1, y0], [x1, y1], [x0, y1]]];
-      var guard = 0;
-      while (cells.length < want && guard++ < 80) {
-        var counts = cells.map(inkIn), bi = counts.indexOf(Math.max.apply(null, counts));
-        var cell = cells[bi];
-        var pts = ink.filter(function (p) { return inPoly(cell, p[0], p[1]); });
-        if (pts.length < 8) break;
-        var mx = 0, my = 0; pts.forEach(function (p) { mx += p[0]; my += p[1]; }); mx /= pts.length; my /= pts.length;
-        var ang = (R() < 0.6 ? 0 : Math.PI / 2) + (R() - 0.5) * 1.3;
-        var off = (R() - 0.5) * FS * 0.15;
-        var halves = cut(cell, mx + Math.cos(ang + Math.PI / 2) * off, my + Math.sin(ang + Math.PI / 2) * off, Math.cos(ang), Math.sin(ang));
-        if (halves[0].length < 3 || halves[1].length < 3) continue;
-        var ia = inkIn(halves[0]), ib = inkIn(halves[1]);
-        if (Math.min(ia, ib) < ink.length * 0.12) continue;      // chaque éclat garde un vrai morceau de lettre
-        cells.splice(bi, 1, halves[0], halves[1]);
-      }
-
-      var family = g.word ? GREENS : BLUES;
-      cells.forEach(function (cell) {
-        var poly = inset(cell, GAP / 2);
-        var tone = R();
-        var cv = document.createElement('canvas');
-        cv.width = Math.ceil(w * DPR); cv.height = Math.ceil(h * DPR);
-        var c = cv.getContext('2d');
-        c.scale(DPR, DPR); c.translate(-x0, -y0);
-        c.beginPath(); poly.forEach(function (p, k) { if (k) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath();
-        c.clip();
-        c.font = font(g.it, FS);
-        c.fillStyle = LETTER_GROUT;
-        c.fillText(g.ch, g.x, g.y);
-        // Tesselles dans la lettre, sur une grille commune à tout le nom.
-        c.globalCompositeOperation = 'source-atop';
-        var gg = Math.max(0.8, tIn * 0.16);
-        for (var ty = Math.floor(y0 / tIn) * tIn; ty < y1; ty += tIn) {
-          for (var tx = Math.floor(x0 / tIn) * tIn; tx < x1; tx += tIn) {
-            var col = R() < 0.75 ? family[Math.floor(tone * 3) % family.length] : pick(family);
-            c.fillStyle = col;
-            c.fillRect(tx + gg / 2 + (R() - .5) * tIn * 0.1, ty + gg / 2 + (R() - .5) * tIn * 0.1, tIn - gg, tIn - gg);
-          }
+    // 1. Lettres : capitales grasses, un peu tournées, pointes aux angles.
+    var off = document.createElement('canvas'); off.width = gw; off.height = gh;
+    var o = off.getContext('2d', { willReadFrequently: true });
+    var oneLine = W / H > 1.9;
+    var lines = oneLine ? [NAME.join(' ')] : NAME;
+    var KERN = 1.03;
+    o.font = '100px ' + FONT;
+    var widest = Math.max.apply(null, lines.map(function (t) { return o.measureText(t).width * KERN; }));
+    FS = Math.min(W * (W < 600 ? 0.88 : 0.7) / widest * 100, (H - 90) * (oneLine ? 0.42 : 0.27));
+    GAP = Math.max(1.6, FS * 0.009);
+    var lineH = FS * 1.12, top = (H - 70) / 2 - (lines.length * lineH) / 2 + FS * 0.9;
+    o.save(); o.scale(1 / G, 1 / G);
+    o.textAlign = 'center'; o.textBaseline = 'alphabetic'; o.fillStyle = '#000';
+    lines.forEach(function (text, li) {
+      o.font = FS + 'px ' + FONT;
+      var ws = Array.from(text).map(function (ch) { return o.measureText(ch).width * KERN; });
+      var total = ws.reduce(function (a, b) { return a + b; }, 0);
+      var x = W / 2 - total / 2 + (lines.length > 1 ? (li ? 1 : -1) * FS * 0.1 : 0);
+      Array.from(text).forEach(function (ch, i) {
+        if (ch !== ' ') {
+          o.save();
+          o.translate(x + ws[i] / 2, top + li * lineH + (R() - 0.5) * FS * 0.08);
+          o.rotate((R() - 0.5) * 0.07);
+          o.transform(1, 0, -0.06, 1, 0, 0);
+          o.font = FS * (0.96 + R() * 0.1) + 'px ' + FONT;
+          o.fillText(ch, 0, 0);
+          o.restore();
         }
-        // Lumière rasante : haut plus clair.
-        var grd = c.createLinearGradient(0, y0, 0, y1);
-        grd.addColorStop(0, 'rgba(255,255,255,.16)'); grd.addColorStop(1, 'rgba(0,0,0,.1)');
-        c.fillStyle = grd; c.fillRect(x0, y0, w, h);
-        // Ombre portée pré-calculée (silhouette).
-        var sh = document.createElement('canvas'); sh.width = cv.width; sh.height = cv.height;
-        var sc = sh.getContext('2d');
-        sc.drawImage(cv, 0, 0); sc.globalCompositeOperation = 'source-in';
-        sc.fillStyle = 'rgb(60,45,25)'; sc.fillRect(0, 0, sh.width, sh.height);
-        var cx = 0, cy = 0; poly.forEach(function (p) { cx += p[0]; cy += p[1]; }); cx /= poly.length; cy /= poly.length;
-        pieces.push({ img: cv, shadow: sh, x0: x0, y0: y0, w: w, h: h, c: [cx, cy] });
+        x += ws[i];
       });
+    });
+    o.restore();
+    var img = o.getImageData(0, 0, gw, gh).data, F = new Uint8Array(N);
+    for (k = 0; k < N; k++) F[k] = img[k * 4 + 3] > 110 ? 1 : 0;
+    F = sharpen(F, V, FS);
+
+    // 2. Filet blanc à l'intérieur des lettres, côté lumière (haut et gauche).
+    var DF = edt(F, gw, gh), shineW = FS * 0.035;
+    var S = new Uint8Array(N), Fi = new Uint8Array(N);
+    for (k = 0; k < N; k++) {
+      if (!F[k]) continue;
+      if (DF[k] <= shineW) {
+        var dx = (DF[k + 1] || 0) - (DF[k - 1] || 0), dy = (DF[k + gw] || 0) - (DF[k - gw] || 0);
+        if ((dx + dy) / (Math.hypot(dx, dy) || 1) > 0.55) { S[k] = 1; continue; }
+      }
+      Fi[k] = 1;
+    }
+    // 3. Contour bleu nuit, 3D violette vers le bas à gauche, second contour.
+    var notF = new Uint8Array(N); for (k = 0; k < N; k++) notF[k] = 1 - F[k];
+    var dOutF = edt(notF, gw, gh), lineW = FS * 0.05;
+    var O = new Uint8Array(N), FO = new Uint8Array(N);
+    for (k = 0; k < N; k++) { O[k] = !F[k] && dOutF[k] <= lineW ? 1 : 0; FO[k] = F[k] | O[k]; }
+    var depth = FS * 0.16, ex = -0.3, ey = 1, el = Math.hypot(ex, ey);
+    ex = ex / el * depth / G; ey = ey / el * depth / G;
+    var E = new Uint8Array(N), steps = Math.ceil(depth / G);
+    for (var gy = 0; gy < gh; gy++) for (var gx = 0; gx < gw; gx++) {
+      if (!FO[gy * gw + gx]) continue;
+      for (var st = 1; st <= steps; st++) {
+        var x2 = Math.round(gx + ex * st / steps), y2 = Math.round(gy + ey * st / steps);
+        if (x2 >= 0 && y2 >= 0 && x2 < gw && y2 < gh && !FO[y2 * gw + x2]) E[y2 * gw + x2] = 1;
+      }
+    }
+    var notU = new Uint8Array(N); for (k = 0; k < N; k++) notU[k] = FO[k] || E[k] ? 0 : 1;
+    var dOutU = edt(notU, gw, gh);
+    var O2 = new Uint8Array(N);
+    for (k = 0; k < N; k++) O2[k] = notU[k] && dOutU[k] <= FS * 0.04 ? 1 : 0;
+    // 4. Nuage de fond autour de la pièce, au bord irrégulier.
+    var C = new Uint8Array(N), a1 = R() * 6, a2 = R() * 6, a3 = R() * 6;
+    for (gy = 0; gy < gh; gy++) for (gx = 0; gx < gw; gx++) {
+      k = gy * gw + gx;
+      if (!notU[k] || O2[k]) continue;
+      var px = gx * G, py = gy * G;
+      var n = (Math.sin(px / FS * 2.1 + a1) + Math.sin(py / FS * 2.7 + a2) + Math.sin((px + py) / FS * 1.3 + a3)) / 3;
+      if (dOutU[k] <= FS * (0.42 + 0.22 * n)) C[k] = 1;
+    }
+
+    // Lit de mortier sous toute la zone carrelée.
+    var mort = document.createElement('canvas'); mort.width = gw; mort.height = gh;
+    var mc = mort.getContext('2d'), md = mc.createImageData(gw, gh), gr = hex(GROUT);
+    for (k = 0; k < N; k++) if (!notU[k] || O2[k] || C[k]) { md.data[k * 4] = gr[0]; md.data[k * 4 + 1] = gr[1]; md.data[k * 4 + 2] = gr[2]; md.data[k * 4 + 3] = 255; }
+    mc.putImageData(md, 0, 0);
+    mortar = mort;
+
+    // 5. Pavage de chaque zone, éclats de tailles différentes.
+    pave(Fi, FS * 0.062, false, 'fill');
+    pave(S, FS * 0.06, false, 'shine');
+    pave(O, FS * 0.075, false, 'line');
+    pave(E, FS * 0.06, true, 'depth');
+    pave(O2, FS * 0.08, false, 'outer');
+    pave(C, FS * 0.1, false, 'cloud');
+
+    // Couleurs, et taches de couleur dans le nuage.
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    pieces.forEach(function (p) {
+      if (p.kind === 'cloud') return;
+      minX = Math.min(minX, p.c[0]); maxX = Math.max(maxX, p.c[0]); minY = Math.min(minY, p.c[1]); maxY = Math.max(maxY, p.c[1]);
+    });
+    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: (maxX - minX) / 2, ry: (maxY - minY) / 2 };
+    var b1 = R() * 6, b2 = R() * 6;
+    pieces.forEach(function (p) {
+      var col;
+      if (p.kind === 'fill') col = R() < 0.03 ? pick(SHINE) : pick(FILL);
+      else if (p.kind === 'shine') col = pick(SHINE);
+      else if (p.kind === 'line' || p.kind === 'outer') col = pick(NAVY);
+      else if (p.kind === 'depth') col = R() < 0.08 ? pick(NAVY) : pick(DEPTH);
+      else {
+        var m = (Math.sin(p.c[0] / FS * 3.1 + b1) + Math.sin(p.c[1] / FS * 3.7 + b2)) / 2;
+        var m2 = (Math.sin(p.c[0] / FS * 1.7 + b2) + Math.sin(p.c[1] / FS * 2.3 + b1)) / 2;
+        if (m > 0.3) col = pick(PATCH[((m2 + 1) * 2) | 0 % 4] || PATCH[0]);
+        else col = pick(PEACH);
+      }
+      p.rgb = hex(col);
+      p.tone = (R() - 0.5) * 0.1;
+      var gx = Math.min(gw - 1, Math.max(0, (p.c[0] / G) | 0)), gy = Math.min(gh - 1, Math.max(0, (p.c[1] / G) | 0));
+      p.dist = p.kind === 'cloud' ? dOutU[gy * gw + gx] : 0;
     });
     info.count = pieces.length;
     plan();
   }
 
-  /* ---------- Animation : même chute, du spectateur vers le mur, du centre vers les bords ---------- */
-  var IMPACT = 170;
+  /* ---------- Animation : du spectateur vers le mur, du centre vers les bords ---------- */
+  var IMPACT = 150;
   function plan() {
-    var last = 0;
+    var end = 0, last = 0, maxD = 1;
     pieces.forEach(function (p) {
       p.r1 = R(); p.r2 = R(); p.r3 = R(); p.r4 = R();
-      var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.6)));
-      p.delay = 200 + dn * 1700 + p.r1 * 180;
-      p.dur = 560 + p.r2 * 160;
-      p.rot0 = (p.r3 - 0.5) * 3;
+      if (p.kind === 'cloud') { maxD = Math.max(maxD, p.dist); return; }
+      var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.5)));
+      p.delay = 120 + dn * 1500 + p.r1 * 260 + (p.kind === 'depth' ? 200 : 0);
+      p.dur = 460 + p.r2 * 160;
+      end = Math.max(end, p.delay + p.dur);
+    });
+    pieces.forEach(function (p) {
+      if (p.kind === 'cloud') {
+        var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.5)));
+        p.delay = end * 0.6 + dn * 900 + (p.dist / maxD) * 500 + p.r1 * 300;
+        p.dur = 380 + p.r2 * 140;
+      }
+      p.rot0 = (p.r3 - 0.5) * 2.6;
       p.tilt0 = 0.5 + p.r4 * 0.8;
       p.axis = p.r1 * Math.PI;
-      p.lx = (p.r2 - 0.5) * FS * 1.1; p.ly = (p.r3 - 0.5) * FS * 0.7 - FS * 0.3;
-      p.placed = false; p.hit = false;
+      p.lx = (p.r2 - 0.5) * FS * 0.9; p.ly = (p.r3 - 0.5) * FS * 0.6 - FS * 0.2;
+      p.placed = false;
       last = Math.max(last, p.delay + p.dur + IMPACT);
     });
     info.total = last;
   }
 
-  function drawPieceAt(c, p, img, px, py, scale, rot, tilt, alpha) {
-    c.save();
-    c.globalAlpha = alpha;
-    c.translate(px, py);
-    c.rotate(rot + p.axis);
-    c.scale(tilt * scale, scale);
-    c.rotate(-p.axis);
-    c.drawImage(img, p.x0 - p.c[0], p.y0 - p.c[1], p.w, p.h);
-    c.restore();
+  function path(c, q, r) {
+    var n = q.length;
+    c.beginPath();
+    for (var i = 0; i < n; i++) {
+      var a = q[(i - 1 + n) % n], b = q[i], d = q[(i + 1) % n];
+      if (i === 0) c.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      c.arcTo(b[0], b[1], (b[0] + d[0]) / 2, (b[1] + d[1]) / 2, r);
+    }
+    c.closePath();
+  }
+
+  function drawWall() {
+    var c = bctx;
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    c.fillStyle = WALL;
+    c.fillRect(0, 0, W, H);
+    // Briques peintes.
+    var bh = Math.max(14, FS * 0.11), bw = bh * 2.6;
+    c.strokeStyle = 'rgba(20,10,60,.28)'; c.lineWidth = 1.2;
+    for (var y = 0, row = 0; y < H; y += bh, row++) {
+      c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+      for (var x = (row % 2) * bw / 2; x < W; x += bw) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + bh); c.stroke(); }
+    }
+    var gr = rng(9);
+    for (var i = 0; i < W * H / 40; i++) {
+      c.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,30,.08)';
+      c.fillRect(gr() * W, gr() * H, 1 + gr() * 2, 1 + gr() * 2);
+    }
+    // Mortier frais là où les éclats vont se poser.
+    c.imageSmoothingEnabled = true;
+    c.drawImage(mortar, 0, 0, gw * G, gh * G);
   }
 
   function placeOnBed(p) {
-    bctx.save();
-    bctx.globalAlpha = 0.28;
-    bctx.drawImage(p.shadow, p.x0 + 1.2, p.y0 + 1.8, p.w, p.h);
-    bctx.restore();
-    bctx.drawImage(p.img, p.x0, p.y0, p.w, p.h);
+    var c = bctx, r = Math.min(2, FS * 0.008);
+    var minI = 0, maxI = 0, q = p.q;
+    for (var i = 1; i < q.length; i++) {
+      if (q[i][0] + q[i][1] < q[minI][0] + q[minI][1]) minI = i;
+      if (q[i][0] + q[i][1] > q[maxI][0] + q[maxI][1]) maxI = i;
+    }
+    var g = c.createLinearGradient(q[minI][0], q[minI][1], q[maxI][0], q[maxI][1]);
+    g.addColorStop(0, css(p.rgb, p.tone + 0.14));
+    g.addColorStop(0.5, css(p.rgb, p.tone));
+    g.addColorStop(1, css(p.rgb, p.tone - 0.1));
+    c.fillStyle = g;
+    path(c, q, r); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.14)'; c.lineWidth = 0.6; c.stroke();
   }
 
   function drawFlying(p, prog, impact) {
     var h = impact >= 0 ? 0 : 1 - prog * prog;
-    var persp = 1 / (1 - h * 0.82);
-    var scale = persp * (impact >= 0 ? 1 - 0.05 * Math.sin(impact * Math.PI) : 1);
-    var px = p.c[0] + (p.c[0] - W / 2) * (persp - 1) * 0.22 + p.lx * h;
-    var py = p.c[1] + (p.c[1] - H / 2) * (persp - 1) * 0.22 + p.ly * h;
+    var persp = 1 / (1 - h * 0.8);
+    var scale = persp * (impact >= 0 ? 1 - 0.06 * Math.sin(impact * Math.PI) : 1);
+    var px = p.c[0] + (p.c[0] - W / 2) * (persp - 1) * 0.25 + p.lx * h;
+    var py = p.c[1] + (p.c[1] - H / 2) * (persp - 1) * 0.25 + p.ly * h;
     var rot = p.rot0 * h, tilt = Math.cos(p.tilt0 * h);
-    if (h > 0.001) {                                       // ombre sur le pavement
-      drawPieceAt(ctx, p, p.shadow, p.c[0] + h * FS * 0.35, p.c[1] + h * FS * 0.5, 1 + h * 0.5, rot, tilt, 0.06 + 0.3 * Math.pow(1 - h, 2));
+    var ca = Math.cos(p.axis), sa = Math.sin(p.axis), cr = Math.cos(rot), sr = Math.sin(rot);
+    function tf(v, ox, oy, k) {
+      var x = v[0] - p.c[0], y = v[1] - p.c[1];
+      var along = (x * ca + y * sa) * tilt, across = -x * sa + y * ca;
+      x = (along * ca - across * sa) * k; y = (along * sa + across * ca) * k;
+      return [ox + x * cr - y * sr, oy + x * sr + y * cr];
     }
-    var alpha = Math.min(1, prog * 5) * (0.6 + 0.4 * (1 - h));
-    drawPieceAt(ctx, p, p.img, px, py, scale, rot, tilt, alpha);
-    var shade = (1 - Math.abs(tilt)) * 0.5;
-    if (shade > 0.02) drawPieceAt(ctx, p, p.shadow, px, py, scale, rot, tilt, alpha * shade);
-    if (impact >= 0 && impact < 0.6) {                     // éclat de lumière à l'impact
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      drawPieceAt(ctx, p, p.img, px, py, scale, rot, tilt, 0.35 * (1 - impact / 0.6));
-      ctx.restore();
+    if (h > 0.001) {
+      ctx.globalAlpha = 0.06 + 0.3 * Math.pow(1 - h, 2);
+      ctx.fillStyle = 'rgb(20,10,40)';
+      path(ctx, p.q.map(function (v) { return tf(v, p.c[0] + h * FS * 0.25, p.c[1] + h * FS * 0.35, 1 + h * 0.6); }), 1);
+      ctx.fill();
     }
+    var alpha = Math.min(1, prog * 5) * (0.55 + 0.45 * (1 - h));
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = css(p.rgb, p.tone);
+    path(ctx, p.q.map(function (v) { return tf(v, px, py, scale); }), 1.2);
+    ctx.fill();
+    var shade = (1 - Math.abs(tilt)) * 0.45;
+    if (shade > 0.02) { ctx.globalAlpha = alpha * shade; ctx.fillStyle = '#000'; ctx.fill(); }
+    if (impact >= 0 && impact < 0.6) { ctx.globalAlpha = 0.4 * (1 - impact / 0.6); ctx.fillStyle = '#fff'; ctx.fill(); }
+    ctx.globalAlpha = 1;
   }
 
-  var shake = 0;
-  function frameStep(now) {
-    var time = now - t0, flying = [], hits = 0;
+  function frame(now) {
+    var time = now - t0, flying = [];
     bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    pieces.forEach(function (p) {
-      if (p.placed) return;
+    for (var i = 0; i < pieces.length; i++) {
+      var p = pieces[i];
+      if (p.placed) continue;
       var tau = time - p.delay;
-      if (tau < 0) return;
-      if (tau > p.dur + IMPACT) { placeOnBed(p); p.placed = true; return; }
-      if (tau > p.dur && !p.hit) { p.hit = true; hits++; }
+      if (tau < 0) continue;
+      if (tau > p.dur + IMPACT) { placeOnBed(p); p.placed = true; continue; }
       flying.push(p);
-    });
-    shake = Math.min(8, shake * 0.8 + hits * 2.2);
-    var ox = (Math.random() - 0.5) * shake, oy = (Math.random() - 0.5) * shake;
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = GROUT;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(bed, ox * DPR, oy * DPR);
-    ctx.setTransform(DPR, 0, 0, DPR, ox * DPR, oy * DPR);
+    ctx.drawImage(bed, 0, 0);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     flying.sort(function (a, b) { return (time - b.delay) / b.dur - (time - a.delay) / a.dur; });
-    flying.forEach(function (p) {
-      var tt = time - p.delay;
-      if (tt <= p.dur) drawFlying(p, tt / p.dur, -1); else drawFlying(p, 1, (tt - p.dur) / IMPACT);
-    });
-    if (time < info.total + 400) requestAnimationFrame(frameStep);
+    for (var j = 0; j < flying.length; j++) {
+      var f = flying[j], tt = time - f.delay;
+      if (tt <= f.dur) drawFlying(f, tt / f.dur, -1); else drawFlying(f, 1, (tt - f.dur) / IMPACT);
+    }
+    if (time < info.total + 300) requestAnimationFrame(frame);
     else { running = false; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bed, 0, 0); }
   }
 
   function play() {
-    drawFloor();
-    pieces.forEach(function (p) { p.placed = false; p.hit = false; });
+    drawWall();
+    pieces.forEach(function (p) { p.placed = false; });
     if (reduceMotion) {
       pieces.forEach(function (p) { placeOnBed(p); p.placed = true; });
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bed, 0, 0);
       return;
     }
     t0 = performance.now();
-    if (!running) { running = true; requestAnimationFrame(frameStep); }
+    if (!running) { running = true; requestAnimationFrame(frame); }
   }
 
   document.getElementById('rejouer').addEventListener('click', play);
@@ -407,10 +629,7 @@
     window.__count = pieces.length;
   }
   if (document.fonts && document.fonts.load) {
-    Promise.all([
-      document.fonts.load('400 100px "Instrument Serif"'),
-      document.fonts.load('italic 400 100px "Instrument Serif"')
-    ]).then(go, go);
+    document.fonts.load('100px "Bowlby One"').then(go, go);
     setTimeout(go, 2500);
   } else go();
 })();
