@@ -2,76 +2,90 @@
 <title>Galvez Martin en mosaïque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Archivo:wght@500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Metamorphous&family=Poller+One&family=Playfair+Display+SC:wght@900&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
 <style>
-  /* Une seule scène : fond noir, le nom en mosaïque verte ; G et A sont les photos d'origine. */
+  /* Une seule scène : un panneau de mosaïque encadré, quatre versions au choix en bas. */
   :root {
-    --wall: #0b0a0d;
-    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-    --tag: #f2efe8;
-    --tag-soft: rgba(242, 239, 232, .5);
-    --accent: #8fd88a;
-    --panel: rgba(20, 30, 24, .85);
+    --page: #1d1c1a;
+    --panel: rgba(20, 19, 17, .86);
     --panel-ink: #f6f1ea;
     --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: dark;
   }
   html, body { height: 100%; }
-  body { margin: 0; background: var(--wall); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
+  body { margin: 0; background: var(--page); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  .tag {
-    position: fixed; margin: 0; font: 700 11px/1.5 var(--mono); letter-spacing: .14em; text-transform: uppercase;
-    color: var(--tag-soft); pointer-events: none;
-  }
-  .tag b { color: var(--tag); font-weight: 700; }
-  .tag i { font-style: normal; color: var(--accent); }
-  .tl { top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; }
-  .tr { top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; text-align: right; }
-  .bl { bottom: calc(22px + env(safe-area-inset-bottom, 0px)); left: 16px; }
-  .br { bottom: calc(22px + env(safe-area-inset-bottom, 0px)); right: 16px; text-align: right; }
-  @media (max-width: 520px) { .bl, .br { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
   .controls {
     position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 2px; align-items: center;
     background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    padding: 6px; border-radius: 14px;
+    padding: 5px; border-radius: 14px; max-width: calc(100% - 24px); overflow-x: auto;
   }
   .controls button {
-    font: 600 14px/1 var(--ui); color: var(--panel-ink); background: transparent; border: 0; cursor: pointer;
-    padding: 10px 16px; border-radius: 9px; white-space: nowrap;
+    font: 600 13px/1 var(--ui); color: var(--panel-ink); background: transparent; border: 0; cursor: pointer;
+    padding: 10px 12px; border-radius: 9px; white-space: nowrap;
   }
-  .controls button:hover { background: rgba(255, 255, 255, .12); }
+  .controls button:hover { background: rgba(255, 255, 255, .1); }
+  .controls button[aria-pressed="true"] { background: rgba(255, 255, 255, .2); }
   .controls button:focus-visible { outline: 2px solid var(--panel-ink); outline-offset: 1px; }
+  .controls .sep { width: 1px; align-self: stretch; margin: 4px 3px; background: rgba(255, 255, 255, .2); }
+  @media (max-width: 520px) { .controls button { padding: 10px 8px; font-size: 12px; } }
 </style>
 
-<canvas id="mur" role="img" aria-label="GALVEZ MARTIN, pièce de graffiti en mosaïque verte"></canvas>
-<p class="tag tl"><b>GM</b> / 001<br>Galvez Martin</p>
-<p class="tag tr"><b>Mosaïque</b><br>Série 02 <i>●</i></p>
-<p class="tag bl">Posé à la main<br><b id="nb-pieces">— pièces</b></p>
-<p class="tag br">Vert bouteille<br><b>Édition 2026</b></p>
-<div class="controls"><button type="button" id="rejouer">↻ Rejouer</button></div>
+<canvas id="mur" role="img" aria-label="GALVEZ MARTIN, en mosaïque"></canvas>
+<div class="controls" role="group" aria-label="Choix de la version">
+  <button type="button" id="v1" data-v="metro" aria-pressed="true">1 Métro</button>
+  <button type="button" id="v2" data-v="ancien" aria-pressed="false">2 Sol ancien</button>
+  <button type="button" id="v3" data-v="nuit" aria-pressed="false">3 Métro nuit</button>
+  <button type="button" id="v4" data-v="faience" aria-pressed="false">4 Faïence</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="rejouer" aria-label="Rejouer">↻</button>
+</div>
 
 <script>
 (function () {
   'use strict';
 
-  /* ---------- Palette, relevée sur les lettres G et A ---------- */
-  var WHITE = ['#f4f6f1', '#ecf1ea', '#ffffff', '#e4ede2', '#f8faf6'];
-  var LIGHT = ['#b9e3b0', '#a8dba0', '#c7e9bf', '#9fd496', '#b2dfa9'];
-  var MID = ['#7fc77a', '#6dbb6b', '#8ccf86', '#62b062', '#77c274'];
-  var TEAL = ['#4fb7a0', '#5cc2aa', '#3fa58f', '#6ccbb4'];
-  var DEEP = ['#2f7d55', '#286e4a', '#367f5a', '#1f5c3e'];
-  var DARK = ['#174a33', '#123d2a', '#1b5238', '#0f3323', '#21573c'];
-  var BLACK = ['#0d1210', '#111815', '#0a0e0c'];
-  var GROUT = '#0f1311';
-  var WALL = '#0b0a0d';
-
-  var FONT = '"Titan One", "Arial Black", sans-serif';
-  // Le nom : G et A sont les photos, le reste est posé par le programme.
-  var NAME = [['G', 'A', 'L', 'V', 'E', 'Z'], ['M', 'A', 'R', 'T', 'I', 'N']];
-  var PHOTOS = { G: { src: 'lettres/G.png', h: 1.42, dy: -0.12 }, A: { src: 'lettres/A.png', h: 1.3, dy: -0.04 } };
-  var V = { tol: 0.012, spike: 0.16, spikeAngle: 105 };
-  var SZ = 1.28;                                          // taille de police / hauteur de lettre   // pointes sur les angles vifs
+  var NAME = 'GALVEZ MARTIN';
+  /* ---------- Les quatre versions ----------
+     fond : 'ecailles' (éventails du métro) ou 'rangs' (rangées horizontales)
+     anim : ordre de pose, les pièces tombant toujours du spectateur vers le mur */
+  var VARIANTS = {
+    metro: {
+      font: '"Limelight"', grout: '#8a877f', page: '#1d1c1a', fond: 'ecailles', halo: 1, stroke: 0.11,
+      letter: ['#eba51c', '#f5bb36', '#e09812', '#f2b02a'], letter2: ['#f7c95a', '#f9d16c'],
+      line: ['#1c1c1b', '#232321', '#151514'], halo1: ['#fbfaf6', '#f2f1ec'],
+      bg: ['#f6f5f1', '#eeede8', '#fafaf7', '#e8e7e2'], bgRing: ['#c8c7c1', '#bdbcb6', '#d1d0ca'],
+      frame: [['#1c1c1b'], ['#eba51c', '#f2b02a'], ['#eba51c', '#e09812'], ['#1c1c1b']],
+      anim: 'centre'
+    },
+    ancien: {
+      font: '"Metamorphous"', grout: '#8f877b', page: '#1e1b18', fond: 'rangs', halo: 3, stroke: 0.055,
+      letter: ['#6b2a22', '#7a3128', '#5e231c', '#83372c'], letter2: ['#4f1d18'],
+      line: ['#5e231c'], halo1: ['#f3eee3', '#ebe5d8', '#f7f3ea'],
+      bg: ['#efe8d9', '#e6dfcf', '#f3eee2', '#ddd5c3', '#e9e2d3'], bgRing: ['#d8cfbb'],
+      frame: [['#3d6b4a', '#356042'], ['#efe8d9'], ['#a65a32', '#b4683c', '#9a5230'], ['#efe8d9'], ['#3d6b4a', '#2f5a3e']],
+      anim: 'lettre'
+    },
+    nuit: {
+      font: '"Poller One"', grout: '#0c0f16', page: '#07080c', fond: 'ecailles', halo: 1, stroke: 0.12,
+      letter: ['#d6a83a', '#e3b84d', '#c8972c', '#ecc35e'], letter2: ['#f3d27a'],
+      line: ['#f1ede4', '#e7e2d7'], halo1: ['#0f1524', '#121a2c'],
+      bg: ['#1a2a4a', '#1f3157', '#172440', '#22365f'], bgRing: ['#2f4a7d', '#35528a', '#2a4373'],
+      frame: [['#d6a83a', '#c8972c'], ['#0f1524'], ['#d6a83a', '#e3b84d'], ['#f1ede4']],
+      anim: 'fond'
+    },
+    faience: {
+      font: '900 {s}px "Playfair Display SC"', grout: '#9aa3ad', page: '#141a22', fond: 'ecailles', halo: 2, stroke: 0.09,
+      letter: ['#3f74c9', '#4a80d2', '#3568bc', '#5589d6'], letter2: ['#2a5db5'],
+      line: ['#0b1d42', '#0d2250'], halo1: ['#ffffff', '#f3f6fa', '#e7eef8'],
+      bg: ['#ffffff', '#f4f7fb', '#eef2f8', '#f9fbfd'], bgRing: ['#9cb9e3', '#a9c3e8', '#8fb0de'],
+      frame: [['#1f4fa3'], ['#ffffff'], ['#5f8fd0', '#6a99d6'], ['#ffffff'], ['#1f4fa3', '#1a4590']],
+      anim: 'vague'
+    }
+  };
+  var variant = 'metro', cache = {};
 
   var canvas = document.getElementById('mur');
   var ctx = canvas.getContext('2d');
@@ -79,7 +93,7 @@
   var bctx = bed.getContext('2d');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var W, H, DPR, G = 2, gw, gh, FS, GAP;
-  var pieces = [], info = {}, imgs = {}, photoSlots = [];
+  var pieces = [], info = {};
   var t0 = 0, running = false;
 
   /* ---------- Hasard reproductible ---------- */
@@ -439,241 +453,184 @@
   }
 
 
-  /* ---------- Construction ---------- */
-  function build() {
+  /* ---------- Construction d'une version ---------- */
+  function build(V) {
     W = window.innerWidth; H = window.innerHeight;
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = bed.width = Math.round(W * DPR);
-    canvas.height = bed.height = Math.round(H * DPR);
     gw = Math.ceil(W / G); gh = Math.ceil(H / G);
-    R = rng(23);
-    pieces = []; photoSlots = [];
-    var N = gw * gh, k, i;
+    R = rng(41);
+    pieces = [];
+    var N = gw * gh, k, x, y;
 
-    // 1. Mise en page : largeur de chaque lettre (photo ou police).
-    var m = document.createElement('canvas').getContext('2d');
-    m.font = '100px ' + FONT;
-    function itemW(ch) {
-      if (PHOTOS[ch]) { var im = imgs[ch]; return PHOTOS[ch].h * im.width / im.height * 100 * 0.86; }
-      return m.measureText(ch).width * SZ * 1.02 + 6;
-    }
-    var oneLine = W / H > 2.2;
-    var lines = oneLine ? [NAME[0].concat([' '], NAME[1])] : NAME;
-    function lineW(l) { return l.reduce(function (s, ch) { return s + (ch === ' ' ? 40 : itemW(ch)); }, 0) / 100; }
-    var maxW = Math.max.apply(null, lines.map(lineW));
-    var top = 70, bottom = W < 520 ? 140 : 90;
-    FS = Math.min(W * (W < 600 ? 0.9 : 0.84) / maxW, (H - top - bottom) / (lines.length * 1.5 + 0.25));
-    GAP = Math.max(1.2, FS * 0.012);
-    var lineH = FS * 1.5;
-    var y0 = top + (H - top - bottom - lines.length * lineH) / 2 + FS * 0.25;
+    // Cadre : rectangle centré, au-dessus de la barre de choix.
+    var m = 14, bottom = 66;
+    var fr = { x0: m, y0: m, x1: W - m, y1: H - bottom };
+    var fw = fr.x1 - fr.x0, fh = fr.y1 - fr.y0;
+    var ROWB = Math.max(6, Math.min(16, Math.min(fw, fh) * 0.022));      // tesselle de fond
+    var frameW = V.frame.length * ROWB;
 
-    var idCanvas = document.createElement('canvas'); idCanvas.width = gw; idCanvas.height = gh;
-    var ic = idCanvas.getContext('2d', { willReadFrequently: true });
-    var photoCanvas = document.createElement('canvas'); photoCanvas.width = gw; photoCanvas.height = gh;
-    var pc = photoCanvas.getContext('2d', { willReadFrequently: true });
-    var letters = [];
-    lines.forEach(function (l, li) {
-      var x = W / 2 - lineW(l) * FS / 2 + (lines.length > 1 ? (li ? 0.15 : -0.15) * FS : 0);
-      var base = y0 + li * lineH + FS;              // ligne de base
-      l.forEach(function (ch) {
-        if (ch === ' ') { x += 0.4 * FS; return; }
-        var w = itemW(ch) / 100 * FS;
-        if (PHOTOS[ch]) {
-          var ph = PHOTOS[ch], hh = ph.h * FS, ww = hh * imgs[ch].width / imgs[ch].height;
-          var slot = { ch: ch, x: x + w / 2 - ww / 2, y: base - FS * 1.08 + ph.dy * FS - (hh - FS * 1.25) / 2, w: ww, h: hh };
-          photoSlots.push(slot);
-          pc.drawImage(imgs[ch], slot.x / G, slot.y / G, ww / G, hh / G);
-        } else {
-          var id = letters.length + 1;
-          letters.push({ ch: ch, x: x + w / 2, base: base + FS * 0.12, rot: (R() - 0.5) * 0.16, sc: SZ * (0.95 + R() * 0.12), id: id });
-          ic.save(); ic.scale(1 / G, 1 / G);
-          ic.translate(x + w / 2, base); ic.rotate(letters[id - 1].rot); ic.transform(1, 0, -0.2, 1, 0, 0);
-          ic.font = FS * letters[id - 1].sc + 'px ' + FONT; ic.textAlign = 'center';
-          ic.fillStyle = 'rgb(' + id + ',0,0)';
-          ic.fillText(ch, 0, 0);
-          ic.restore();
-        }
-        x += w;
-      });
+    // Lettres.
+    var off = document.createElement('canvas'); off.width = gw; off.height = gh;
+    var o = off.getContext('2d', { willReadFrequently: true });
+    function fnt(sz) { return V.font.indexOf('{s}') >= 0 ? V.font.replace('{s}', sz) : sz + 'px ' + V.font; }
+    o.font = fnt(100);
+    if ('letterSpacing' in o) o.letterSpacing = '6px';
+    var innerW = fw - 2 * frameW - 2 * ROWB * 2, innerH = fh - 2 * frameW - 2 * ROWB * 2;
+    var one = o.measureText(NAME).width / 100, words = NAME.split(' ');
+    var two = Math.max.apply(null, words.map(function (w) { return o.measureText(w).width / 100; }));
+    var fsOne = Math.min(innerW * 0.94 / one, innerH * 0.6), fsTwo = Math.min(innerW * 0.94 / two, innerH * 0.42);
+    var lines = fsTwo > fsOne * 1.15 ? words : [NAME];
+    FS = lines.length > 1 ? fsTwo : fsOne;
+    GAP = Math.max(1.2, FS * 0.008);
+    o.font = fnt(FS);
+    if ('letterSpacing' in o) o.letterSpacing = Math.round(FS * 0.06) + 'px';
+    var mt = o.measureText('M'), cap = mt.actualBoundingBoxAscent;
+    var lineH = cap * 1.45, cy = (fr.y0 + fr.y1) / 2;
+    o.save(); o.scale(1 / G, 1 / G);
+    o.textAlign = 'center'; o.fillStyle = '#000';
+    lines.forEach(function (t, i) {
+      o.fillText(t, W / 2, cy - (lines.length - 1) * lineH / 2 + i * lineH + cap / 2);
     });
-    var idData = ic.getImageData(0, 0, gw, gh).data, phData = pc.getImageData(0, 0, gw, gh).data;
-    var F = new Uint8Array(N), LID = new Uint8Array(N), P = new Uint8Array(N);
-    for (k = 0; k < N; k++) {
-      if (idData[k * 4 + 3] > 110) { F[k] = 1; LID[k] = idData[k * 4]; }
-      if (phData[k * 4 + 3] > 40) P[k] = 1;
-    }
-    // Déformation douce : les lettres gonflent et ondulent comme les formes des photos.
-    (function () {
-      var F2 = new Uint8Array(N), L2 = new Uint8Array(N), lam = FS * 0.55 / G, amp = FS * 0.055 / G;
-      var p1 = R() * 6, p2 = R() * 6;
-      for (var y = 0; y < gh; y++) for (var x = 0; x < gw; x++) {
-        var sx = Math.round(x + amp * Math.sin(y / lam + p1) + amp * 0.6 * Math.sin((x + y) / (lam * 1.7) + p2));
-        var sy = Math.round(y + amp * Math.sin(x / lam + p2));
-        if (sx < 0 || sy < 0 || sx >= gw || sy >= gh) continue;
-        var kk = sy * gw + sx; F2[y * gw + x] = F[kk]; L2[y * gw + x] = LID[kk];
-      }
-      F = F2; LID = L2;
-    })();
-    F = sharpen(F, V, FS);
-    for (k = 0; k < N; k++) if (F[k] && !LID[k]) {                // pointes ajoutées : rattacher à la lettre voisine
-      for (var r2 = 1; r2 < 30 && !LID[k]; r2++) {
-        var cand = [k - r2, k + r2, k - r2 * gw, k + r2 * gw];
-        for (i = 0; i < 4; i++) if (cand[i] >= 0 && cand[i] < N && LID[cand[i]]) { LID[k] = LID[cand[i]]; break; }
-      }
-    }
+    o.restore();
+    var img = o.getImageData(0, 0, gw, gh).data, F = new Uint8Array(N);
+    for (k = 0; k < N; k++) F[k] = img[k * 4 + 3] > 120 ? 1 : 0;
 
-    // 2. Dans chaque lettre : un dôme blanc en haut, séparé du vert par un trait noir.
-    var bbox = letters.map(function () { return [Infinity, -Infinity, Infinity, -Infinity]; });
-    for (k = 0; k < N; k++) if (F[k] && LID[k]) {
-      var b = bbox[LID[k] - 1], gx = k % gw, gy = (k / gw) | 0;
-      b[0] = Math.min(b[0], gx); b[1] = Math.max(b[1], gx); b[2] = Math.min(b[2], gy); b[3] = Math.max(b[3], gy);
-    }
-    letters.forEach(function (L, j) {
-      L.bb = bbox[j];
-      L.split = 0.2 + R() * 0.12; L.tiltS = (R() - 0.5) * 0.5; L.wave = R() * 6; L.flip = R() < 0.5;
-    });
-    var ROWL = Math.max(4, FS * 0.028);
-    var Wt = new Uint8Array(N), Gr = new Uint8Array(N), Bl = new Uint8Array(N);
-    for (k = 0; k < N; k++) {
-      if (!F[k]) continue;
-      var L2 = letters[(LID[k] || 1) - 1], bb2 = L2.bb, gx2 = k % gw, gy2 = (k / gw) | 0;
-      var u = (gx2 - bb2[0]) / Math.max(1, bb2[1] - bb2[0]), v = (gy2 - bb2[2]) / Math.max(1, bb2[3] - bb2[2]);
-      var cut = L2.split + L2.tiltS * (u - 0.5) + 0.22 * Math.pow(u - 0.5, 2) + 0.04 * Math.sin(u * 5 + L2.wave);
-      var dpx = (v - cut) * (bb2[3] - bb2[2]) * G;              // distance verticale au trait, en px
-      if (Math.abs(dpx) < ROWL * 0.35) Bl[k] = 1;
-      else if (dpx < 0) Wt[k] = 1; else Gr[k] = 1;
-    }
-    // 3. Contour noir, bande vert sombre, puis relief vert profond vers le bas.
+    // Zones : lettres, contour, halo, fond, cadre.
     var notF = new Uint8Array(N); for (k = 0; k < N; k++) notF[k] = 1 - F[k];
     var dOut = edt(notF, gw, gh);
-    var O = new Uint8Array(N), O2 = new Uint8Array(N), FO = new Uint8Array(N);
-    for (k = 0; k < N; k++) {
-      if (F[k]) { FO[k] = 1; continue; }
-      if (dOut[k] <= ROWL * 0.75) O[k] = FO[k] = 1;
-      else if (dOut[k] <= ROWL * 2.0) O2[k] = FO[k] = 1;
+    var ROWL = Math.max(5, FS * V.stroke);
+    var ROWO = Math.max(4, ROWB * 0.85);
+    var Fr = new Uint8Array(N), DFr = new Float32Array(N), O = new Uint8Array(N), Ha = new Uint8Array(N), B = new Uint8Array(N);
+    var lineEnd = ROWO, haloEnd = ROWO + V.halo * ROWB;
+    for (y = 0; y < gh; y++) for (x = 0; x < gw; x++) {
+      k = y * gw + x;
+      var px = (x + .5) * G, py = (y + .5) * G;
+      var dfr = Math.min(px - fr.x0, fr.x1 - px, py - fr.y0, fr.y1 - py);
+      DFr[k] = dfr;
+      if (dfr < 0) continue;
+      if (dfr < frameW) { Fr[k] = 1; continue; }
+      if (F[k]) continue;
+      if (dOut[k] <= lineEnd) O[k] = 1;
+      else if (dOut[k] <= haloEnd) Ha[k] = 1;
+      else B[k] = 1;
     }
-    var depth = FS * 0.17, ex = -0.25, ey = 1, el = Math.hypot(ex, ey);
-    ex = ex / el * depth / G; ey = ey / el * depth / G;
-    var E = new Uint8Array(N), steps = Math.ceil(depth / G);
-    for (var yy = 0; yy < gh; yy++) for (var xx = 0; xx < gw; xx++) {
-      if (!FO[yy * gw + xx]) continue;
-      for (var st = 1; st <= steps; st++) {
-        var x2 = Math.round(xx + ex * st / steps), y2 = Math.round(yy + ey * st / steps);
-        if (x2 >= 0 && y2 >= 0 && x2 < gw && y2 < gh && !FO[y2 * gw + x2]) E[y2 * gw + x2] = 1;
-      }
-    }
-    var notU = new Uint8Array(N); for (k = 0; k < N; k++) notU[k] = FO[k] || E[k] ? 0 : 1;
-    var dU = edt(notU, gw, gh), O3 = new Uint8Array(N);
-    for (k = 0; k < N; k++) O3[k] = notU[k] && dU[k] <= ROWL * 0.8 ? 1 : 0;
-    // Les photos passent devant : rien n'est posé sous elles.
-    [Wt, Gr, Bl, O, O2, E, O3].forEach(function (M) { for (k = 0; k < N; k++) if (P[k]) M[k] = 0; });
 
-    // 4. Pose en rangées qui suivent les formes.
+    // Distance qui guide les rangées du fond.
+    var DB = new Float32Array(N);
+    if (V.fond === 'ecailles') {
+      // Écailles (éventails) : chaque rangée recouvre la précédente, rangs concentriques.
+      var Rs = ROWB * 7.5, sx = Rs * 2, sy = Rs * 0.95;
+      for (y = 0; y < gh; y++) for (x = 0; x < gw; x++) {
+        k = y * gw + x;
+        if (!B[k]) continue;
+        var qx = (x + .5) * G, qy = (y + .5) * G, best = -1e9, bd = 0;
+        var j0 = Math.floor(qy / sy);
+        for (var j = j0 + 1; j >= j0 - 1; j--) {
+          var off2 = (j & 1) ? Rs : 0, i0 = Math.floor((qx - off2) / sx);
+          for (var i = i0 - 1; i <= i0 + 2; i++) {
+            var ccx = i * sx + off2, ccy = j * sy, d = Math.hypot(qx - ccx, qy - ccy);
+            if (d < Rs && j > best) { best = j; bd = Rs - d; }
+          }
+          if (best > -1e9) break;
+        }
+        DB[k] = bd;
+      }
+    } else {
+      for (y = 0; y < gh; y++) for (x = 0; x < gw; x++) DB[y * gw + x] = (y + .5) * G + Math.sin(x * G / (ROWB * 9)) * ROWB * 0.4;
+    }
+
+    // Pose, zone par zone.
     occ = new Uint8Array(N);
-    function lay(mask, row, lenK, kind) {
+    function lay(mask, D, row, lenK, kind, ringD) {
+      var start = pieces.length;
       ROW = Math.max(row, 4);
-      var D = edt(mask, gw, gh);
       layRows(mask, D, kind, lenK);
       fillGaps(mask, D, kind);
+      for (var n = start; n < pieces.length; n++) {
+        var p = pieces[n], gx = clamp((p.c[0] / G) | 0, 0, gw - 1), gy = clamp((p.c[1] / G) | 0, 0, gh - 1);
+        p.ring = Math.floor((ringD || D)[gy * gw + gx] / ROW);
+      }
     }
-    lay(Bl, ROWL * 0.7, 1.8, 'cutline');
-    lay(O, ROWL * 0.75, 1.8, 'line');
-    lay(Wt, ROWL, 1.25, 'white');
-    lay(Gr, ROWL, 1.25, 'green');
-    lay(O2, ROWL * 1.3, 1.3, 'band');
-    lay(E, ROWL * 1.1, 1.1, 'depth');
-    lay(O3, ROWL * 0.8, 1.7, 'line');
+    var DFin = edt(F, gw, gh);
+    lay(F, DFin, ROWL, 1.0, 'letter');
+    var DO = new Float32Array(N); for (k = 0; k < N; k++) DO[k] = dOut[k];
+    lay(O, DO, ROWO, 1.4, 'line');
+    var DH = new Float32Array(N); for (k = 0; k < N; k++) DH[k] = dOut[k] - lineEnd;
+    lay(Ha, DH, ROWB, 1.2, 'halo');
+    lay(Fr, DFr, ROWB, 1.25, 'frame');
+    if (V.fond === 'ecailles') lay(B, DB, ROWB, 1.15, 'bg');
+    else {
+      // rangées horizontales : la fonction de distance donne directement les lignes
+      ROW = ROWB;
+      layRows(B, DB, 'bg', 1.05);
+      fillGaps(B, edt(B, gw, gh), 'bg');
+    }
 
-    // 5. Couleurs : dégradés par tesselle, comme sur les photos.
-    var tiles = pieces;
-    tiles.forEach(function (p) {
-      var gx = clamp((p.c[0] / G) | 0, 0, gw - 1), gy = clamp((p.c[1] / G) | 0, 0, gh - 1), kk = gy * gw + gx;
-      var L3 = letters[(LID[kk] || 1) - 1], bb3 = L3.bb;
-      var v = clamp((gy - bb3[2]) / Math.max(1, bb3[3] - bb3[2]), 0, 1);
-      var u = clamp((gx - bb3[0]) / Math.max(1, bb3[1] - bb3[0]), 0, 1);
-      var r = R(), col;
-      if (p.kind === 'white') col = r < 0.82 ? pick(WHITE) : pick(LIGHT);
-      else if (p.kind === 'green') {
-        var t = v + (r - 0.5) * 0.12 + (L3.flip ? u : 1 - u) * 0.12;
-        col = t < 0.5 ? pick(LIGHT) : t < 0.78 ? pick(MID) : t < 0.95 ? pick(TEAL) : pick(DEEP);
-      }
-      else if (p.kind === 'cutline' || p.kind === 'line') col = pick(BLACK);
-      else if (p.kind === 'band') col = R() < 0.7 ? pick(DEEP) : pick(DARK);
-      else col = R() < 0.75 ? pick(DARK) : pick(DEEP);
+    // Couleurs.
+    pieces.forEach(function (p) {
+      var col, r = R();
+      if (p.kind === 'letter') col = r < 0.75 ? V.letter[(R() * V.letter.length) | 0] : V.letter2[(R() * V.letter2.length) | 0];
+      else if (p.kind === 'line') col = pick(V.line);
+      else if (p.kind === 'halo') col = pick(V.halo1);
+      else if (p.kind === 'frame') col = pick(V.frame[clamp(p.ring, 0, V.frame.length - 1)]);
+      else col = V.fond === 'ecailles' && p.ring % 4 === 0 ? pick(V.bgRing) : pick(V.bg);
       p.rgb = hex(col);
-      p.tone = (R() - 0.5) * 0.1;
+      p.tone = (R() - 0.5) * 0.08;
+      var gx = clamp((p.c[0] / G) | 0, 0, gw - 1), gy = clamp((p.c[1] / G) | 0, 0, gh - 1), kk = gy * gw + gx;
+      p.dl = F[kk] ? 0 : dOut[kk];
+      p.df = DFr[kk];
     });
-
-    // 6. Les photos G et A, découpées en éclats pour l'animation.
-    photoSlots.forEach(function (s, si) {
-      var im = imgs[s.ch];
-      var full = document.createElement('canvas');
-      full.width = Math.ceil(s.w * DPR); full.height = Math.ceil(s.h * DPR);
-      var fc = full.getContext('2d', { willReadFrequently: true });
-      fc.drawImage(im, 0, 0, full.width, full.height);
-      var alpha = fc.getImageData(0, 0, full.width, full.height).data;
-      s.full = full;
-      var cell = FS * 0.13, cols = Math.max(3, Math.round(s.w / cell)), rows = Math.max(3, Math.round(s.h / cell));
-      var mesh = [];
-      for (var j = 0; j <= rows; j++) {
-        mesh[j] = [];
-        for (var c = 0; c <= cols; c++) {
-          var jx = c > 0 && c < cols ? (R() - 0.5) * 0.6 : 0, jy = j > 0 && j < rows ? (R() - 0.5) * 0.6 : 0;
-          mesh[j][c] = [s.x + (c + jx) / cols * s.w, s.y + (j + jy) / rows * s.h];
-        }
-      }
-      s.pieces = 0;
-      for (j = 0; j < rows; j++) for (c = 0; c < cols; c++) {
-        var q = [mesh[j][c], mesh[j][c + 1], mesh[j + 1][c + 1], mesh[j + 1][c]];
-        // L'éclat contient-il de la mosaïque ?
-        var cnt = 0;
-        for (var a = 0.2; a < 1; a += 0.3) for (var b3 = 0.2; b3 < 1; b3 += 0.3) {
-          var px = (q[0][0] * (1 - a) + q[1][0] * a) * (1 - b3) + (q[3][0] * (1 - a) + q[2][0] * a) * b3;
-          var py = (q[0][1] * (1 - a) + q[1][1] * a) * (1 - b3) + (q[3][1] * (1 - a) + q[2][1] * a) * b3;
-          var ax = clamp(((px - s.x) * DPR) | 0, 0, full.width - 1), ay = clamp(((py - s.y) * DPR) | 0, 0, full.height - 1);
-          if (alpha[(ay * full.width + ax) * 4 + 3] > 40) cnt++;
-        }
-        if (!cnt) continue;
-        var bx = Math.floor(Math.min(q[0][0], q[3][0])) - 1, by = Math.floor(Math.min(q[0][1], q[1][1])) - 1;
-        var bw = Math.ceil(Math.max(q[1][0], q[2][0])) + 1 - bx, bh = Math.ceil(Math.max(q[2][1], q[3][1])) + 1 - by;
-        var pcv = document.createElement('canvas'); pcv.width = Math.ceil(bw * DPR); pcv.height = Math.ceil(bh * DPR);
-        var pcx = pcv.getContext('2d');
-        pcx.scale(DPR, DPR); pcx.translate(-bx, -by);
-        pcx.beginPath(); q.forEach(function (v2, n) { if (n) pcx.lineTo(v2[0], v2[1]); else pcx.moveTo(v2[0], v2[1]); }); pcx.closePath();
-        pcx.clip();
-        pcx.drawImage(im, s.x, s.y, s.w, s.h);
-        pieces.push({ img: pcv, x0: bx, y0: by, w: bw, h: bh, c: centroid(q), q: q, slot: si, kind: 'photo' });
-        s.pieces++;
-      }
-    });
-
+    // repère de chaque lettre (pour la pose lettre par lettre)
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     pieces.forEach(function (p) {
+      if (p.kind !== 'letter') return;
       minX = Math.min(minX, p.c[0]); maxX = Math.max(maxX, p.c[0]); minY = Math.min(minY, p.c[1]); maxY = Math.max(maxY, p.c[1]);
     });
-    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: Math.max(1, (maxX - minX) / 2), ry: Math.max(1, (maxY - minY) / 2) };
-    plan();
+    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: Math.max(1, (maxX - minX) / 2), ry: Math.max(1, (maxY - minY) / 2),
+             minX: minX, maxX: maxX, fr: fr, maxDF: Math.min(fw, fh) / 2 };
+    plan(V);
+    return { pieces: pieces, info: info, FS: FS, W: W, H: H };
   }
 
-  /* ---------- Animation : du spectateur vers le mur, du centre vers les bords ---------- */
+  /* ---------- Ordre de pose ---------- */
   var IMPACT = 150;
-  function plan() {
-    var last = 0;
+  function plan(V) {
+    var last = 0, maxDl = 1;
     pieces.forEach(function (p) {
       p.r1 = R(); p.r2 = R(); p.r3 = R(); p.r4 = R();
-      var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.6)));
-      var late = p.kind === 'depth' || p.kind === 'band' ? 220 : 0;
-      p.delay = 120 + dn * 1700 + p.r1 * 260 + late;
-      p.dur = p.img ? 600 + p.r2 * 180 : 460 + p.r2 * 160;
-      p.rot0 = (p.r3 - 0.5) * (p.img ? 2 : 2.6);
+      if (p.kind === 'bg' || p.kind === 'halo') maxDl = Math.max(maxDl, p.dl);
+    });
+    var span = Math.max(1, info.maxX - info.minX);
+    pieces.forEach(function (p) {
+      var dn = Math.min(1.3, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 2)));
+      var ln = (p.c[0] - info.minX) / span, dl = p.dl / maxDl, df = clamp(p.df / info.maxDF, 0, 1);
+      var isL = p.kind === 'letter' || p.kind === 'line';
+      var d;
+      if (V.anim === 'centre') {
+        d = isL ? 150 + dn * 1300 : p.kind === 'frame' ? 2300 + (1 - df) * 400 : 1100 + dn * 900 + dl * 700;
+      } else if (V.anim === 'lettre') {
+        // lettre après lettre, de gauche à droite ; chaque lettre se pose avec son halo
+        d = isL ? 150 + ln * 2200 : p.kind === 'halo' ? 350 + clamp(ln, 0, 1) * 2200 + dl * 300 :
+            p.kind === 'frame' ? 2700 + (p.c[0] / W) * 500 : 2300 + dl * 900;
+      } else if (V.anim === 'fond') {
+        // d'abord le cadre et le fond, des bords vers le centre, puis les lettres
+        d = p.kind === 'frame' ? 100 + p.r1 * 300 : p.kind === 'bg' || p.kind === 'halo' ? 300 + df * 1500 :
+            2000 + dn * 900;
+      } else {
+        // vague : les rangs s'enroulent autour des lettres, un anneau après l'autre
+        d = isL ? 150 + ln * 900 : p.kind === 'frame' ? 2900 + (1 - df) * 300 : 900 + dl * 2000;
+      }
+      p.delay = d + p.r1 * 200;
+      p.dur = 440 + p.r2 * 160;
+      p.rot0 = (p.r3 - 0.5) * 2.4;
       p.tilt0 = 0.5 + p.r4 * 0.8;
       p.axis = p.r1 * Math.PI;
-      p.lx = (p.r2 - 0.5) * FS * 0.9; p.ly = (p.r3 - 0.5) * FS * 0.6 - FS * 0.2;
+      p.lx = (p.r2 - 0.5) * FS * 0.6; p.ly = (p.r3 - 0.5) * FS * 0.4 - FS * 0.15;
       last = Math.max(last, p.delay + p.dur + IMPACT);
     });
     info.total = last;
   }
 
+  /* ---------- Rendu ---------- */
   function path(c, q) {
     c.beginPath();
     c.moveTo(q[0][0], q[0][1]);
@@ -681,34 +638,30 @@
     c.closePath();
   }
 
-  function drawBase() {
+  function drawBase(V) {
     var c = bctx;
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
-    c.fillStyle = WALL;
+    c.fillStyle = V.page;
     c.fillRect(0, 0, W, H);
+    var f = info.fr;
+    c.fillStyle = V.grout;                                   // lit de mortier
+    c.fillRect(f.x0, f.y0, f.x1 - f.x0, f.y1 - f.y0);
     var gr = rng(9);
-    for (var i = 0; i < W * H / 60; i++) {
-      c.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.25)';
-      c.fillRect(gr() * W, gr() * H, 1 + gr() * 1.5, 1 + gr() * 1.5);
+    for (var i = 0; i < (f.x1 - f.x0) * (f.y1 - f.y0) / 70; i++) {
+      c.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.08)';
+      c.fillRect(f.x0 + gr() * (f.x1 - f.x0), f.y0 + gr() * (f.y1 - f.y0), 1.5, 1.5);
     }
   }
 
   function placeOnBed(p) {
-    var c = bctx;
-    if (p.img) {
-      c.drawImage(p.img, p.x0, p.y0, p.w, p.h);
-      var s = photoSlots[p.slot];
-      if (++s.done === s.pieces) c.drawImage(s.full, s.x, s.y, s.w, s.h);   // la photo, telle quelle
-      return;
-    }
-    var q = p.q, minI = 0, maxI = 0;
+    var c = bctx, q = p.q, minI = 0, maxI = 0;
     for (var i = 1; i < q.length; i++) {
       if (q[i][0] + q[i][1] < q[minI][0] + q[minI][1]) minI = i;
       if (q[i][0] + q[i][1] > q[maxI][0] + q[maxI][1]) maxI = i;
     }
     var g = c.createLinearGradient(q[minI][0], q[minI][1], q[maxI][0], q[maxI][1]);
     g.addColorStop(0, css(p.rgb, p.tone + 0.12));
-    g.addColorStop(0.5, css(p.rgb, p.tone));
+    g.addColorStop(0.55, css(p.rgb, p.tone));
     g.addColorStop(1, css(p.rgb, p.tone - 0.1));
     c.fillStyle = g;
     path(c, q); c.fill();
@@ -721,21 +674,19 @@
     var px = p.c[0] + (p.c[0] - W / 2) * (persp - 1) * 0.25 + p.lx * h;
     var py = p.c[1] + (p.c[1] - H / 2) * (persp - 1) * 0.25 + p.ly * h;
     var rot = p.rot0 * h, tilt = Math.cos(p.tilt0 * h);
-    var alpha = Math.min(1, prog * 5) * (0.55 + 0.45 * (1 - h));
-    if (p.img) {
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.translate(px, py); ctx.rotate(rot + p.axis); ctx.scale(tilt * scale, scale); ctx.rotate(-p.axis);
-      ctx.drawImage(p.img, p.x0 - p.c[0], p.y0 - p.c[1], p.w, p.h);
-      ctx.restore();
-      return;
-    }
     var ca = Math.cos(p.axis), sa = Math.sin(p.axis), cr = Math.cos(rot), sr = Math.sin(rot);
     function tf(v) {
       var x = v[0] - p.c[0], y = v[1] - p.c[1];
       var along = (x * ca + y * sa) * tilt, across = -x * sa + y * ca;
       x = (along * ca - across * sa) * scale; y = (along * sa + across * ca) * scale;
       return [px + x * cr - y * sr, py + x * sr + y * cr];
+    }
+    var alpha = Math.min(1, prog * 5) * (0.55 + 0.45 * (1 - h));
+    if (h > 0.001) {
+      ctx.globalAlpha = 0.05 + 0.25 * Math.pow(1 - h, 2);
+      ctx.fillStyle = '#000';
+      path(ctx, p.q.map(function (v) { return [v[0] + h * FS * 0.2, v[1] + h * FS * 0.3]; }));
+      ctx.fill();
     }
     ctx.globalAlpha = alpha;
     ctx.fillStyle = css(p.rgb, p.tone);
@@ -771,26 +722,40 @@
   }
 
   function play() {
-    drawBase();
+    var V = VARIANTS[variant];
+    var key = variant + ':' + window.innerWidth + 'x' + window.innerHeight;
+    if (!cache[key]) cache[key] = build(V);
+    var c = cache[key];
+    pieces = c.pieces; info = c.info; FS = c.FS; W = c.W; H = c.H;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = bed.width = Math.round(W * DPR);
+    canvas.height = bed.height = Math.round(H * DPR);
+    document.body.style.background = V.page;
+    drawBase(V);
     pieces.forEach(function (p) { p.placed = false; });
-    photoSlots.forEach(function (s) { s.done = 0; });
     if (reduceMotion) {
-      bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       pieces.forEach(function (p) { placeOnBed(p); p.placed = true; });
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bed, 0, 0);
       return;
     }
     t0 = performance.now();
     if (!running) { running = true; requestAnimationFrame(frame); }
-  }
-
-  function count() {
-    document.getElementById('nb-pieces').textContent = pieces.length.toLocaleString('fr-FR') + ' pièces';
     window.__count = pieces.length;
   }
+
+  function choose(v) {
+    variant = v;
+    document.querySelectorAll('[data-v]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === v ? 'true' : 'false'); });
+    play();
+  }
+  document.querySelectorAll('[data-v]').forEach(function (b) {
+    b.addEventListener('click', function () { choose(b.getAttribute('data-v')); });
+  });
   document.getElementById('rejouer').addEventListener('click', play);
   window.addEventListener('keydown', function (e) {
-    if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
+    var keys = { '1': 'metro', '2': 'ancien', '3': 'nuit', '4': 'faience' };
+    if (keys[e.key]) choose(keys[e.key]);
+    else if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
   });
   var timer, lastW = 0, lastH = 0, started = false;
   window.addEventListener('resize', function () {
@@ -799,22 +764,14 @@
     timer = setTimeout(function () {
       if (Math.abs(window.innerWidth - lastW) < 2 && Math.abs(window.innerHeight - lastH) < 60) return;
       lastW = window.innerWidth; lastH = window.innerHeight;
-      build(); play(); count();
+      cache = {}; play();
     }, 250);
   });
 
-  function loadImg(ch) {
-    return new Promise(function (res) {
-      var im = new Image();
-      im.onload = function () { imgs[ch] = im; res(); };
-      im.onerror = function () { res(); };
-      im.src = PHOTOS[ch].src;
-    });
-  }
-  var fontReady = document.fonts && document.fonts.load ? document.fonts.load('100px "Titan One"').catch(function () {}) : Promise.resolve();
-  Promise.all([fontReady, loadImg('G'), loadImg('A')]).then(function () {
-    started = true; lastW = window.innerWidth; lastH = window.innerHeight;
-    build(); play(); count();
-  });
+  var fonts = ['100px "Limelight"', '100px "Metamorphous"', '100px "Poller One"', '900 100px "Playfair Display SC"'];
+  var ready = document.fonts && document.fonts.load ? Promise.all(fonts.map(function (f) { return document.fonts.load(f).catch(function () {}); })) : Promise.resolve();
+  var go = function () { if (started) return; started = true; lastW = window.innerWidth; lastH = window.innerHeight; play(); };
+  ready.then(go, go);
+  setTimeout(go, 3000);
 })();
 </script>
