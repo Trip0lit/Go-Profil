@@ -1,16 +1,17 @@
+<meta charset="utf-8">
 <title>Galvez Martin en mosaïque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Archivo:wght@500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Archivo:wght@500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  /* Une seule scène : fond noir, le nom en pièce de graffiti posée en mosaïque, étiquettes de collection dans les coins. */
+  /* Une seule scène : fond noir, le nom en mosaïque verte ; G et A sont les photos d'origine. */
   :root {
     --wall: #0b0a0d;
     --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
     --tag: #f2efe8;
     --tag-soft: rgba(242, 239, 232, .5);
-    --accent: #ffd23f;
-    --panel: rgba(24, 18, 52, .82);
+    --accent: #8fd88a;
+    --panel: rgba(20, 30, 24, .85);
     --panel-ink: #f6f1ea;
     --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: dark;
@@ -43,30 +44,34 @@
   .controls button:focus-visible { outline: 2px solid var(--panel-ink); outline-offset: 1px; }
 </style>
 
-<canvas id="mur" role="img" aria-label="GALVEZ MARTIN, pièce de graffiti posée en mosaïque"></canvas>
+<canvas id="mur" role="img" aria-label="GALVEZ MARTIN, pièce de graffiti en mosaïque verte"></canvas>
 <p class="tag tl"><b>GM</b> / 001<br>Galvez Martin</p>
-<p class="tag tr"><b>Mosaïque</b><br>Série 01 <i>●</i></p>
+<p class="tag tr"><b>Mosaïque</b><br>Série 02 <i>●</i></p>
 <p class="tag bl">Posé à la main<br><b id="nb-pieces">— pièces</b></p>
-<p class="tag br">Trencadís<br><b>Édition 2026</b></p>
+<p class="tag br">Vert bouteille<br><b>Édition 2026</b></p>
 <div class="controls"><button type="button" id="rejouer">↻ Rejouer</button></div>
 
 <script>
 (function () {
   'use strict';
 
-  /* ---------- Palette, relevée sur la mosaïque de référence ---------- */
-  var FILL = ['#b4cff5', '#a2c3f1', '#c4dbf8', '#93b6ec', '#d0e3fa', '#aac9f3', '#9cbdef'];
-  var SHINE = ['#ffffff', '#f4f7fd', '#eef3fc'];
-  var NAVY = ['#1d1b5e', '#231f6e', '#191652', '#2a2479'];
-  var DEPTH = ['#7b5cf0', '#6a4be0', '#8c70f5', '#5a3fcc', '#9b85f7', '#6f52e6', '#4d36b5'];
-  var PEACH = ['#ffb98a', '#ffad78', '#ffc59c', '#f9a46c', '#ffbf92'];
-  var PATCH = [['#16c4ad', '#22d3bb', '#10ad99'], ['#ff7a2f', '#ff8c45'], ['#ffd23f', '#ffc928'], ['#9be15d', '#8bd34c']];
-  var GROUT = '#16131a';
+  /* ---------- Palette, relevée sur les lettres G et A ---------- */
+  var WHITE = ['#f4f6f1', '#ecf1ea', '#ffffff', '#e4ede2', '#f8faf6'];
+  var LIGHT = ['#b9e3b0', '#a8dba0', '#c7e9bf', '#9fd496', '#b2dfa9'];
+  var MID = ['#7fc77a', '#6dbb6b', '#8ccf86', '#62b062', '#77c274'];
+  var TEAL = ['#4fb7a0', '#5cc2aa', '#3fa58f', '#6ccbb4'];
+  var DEEP = ['#2f7d55', '#286e4a', '#367f5a', '#1f5c3e'];
+  var DARK = ['#174a33', '#123d2a', '#1b5238', '#0f3323', '#21573c'];
+  var BLACK = ['#0d1210', '#111815', '#0a0e0c'];
+  var GROUT = '#0f1311';
   var WALL = '#0b0a0d';
 
-  var FONT = '"Bowlby One", "Arial Black", sans-serif';
-  var NAME = ['GALVEZ', 'MARTIN'];
-  var V = { tol: 0.018, spike: 0.1, spikeAngle: 118 };   // taille en pointes des angles
+  var FONT = '"Titan One", "Arial Black", sans-serif';
+  // Le nom : G et A sont les photos, le reste est posé par le programme.
+  var NAME = [['G', 'A', 'L', 'V', 'E', 'Z'], ['M', 'A', 'R', 'T', 'I', 'N']];
+  var PHOTOS = { G: { src: 'lettres/G.png', h: 1.42, dy: -0.12 }, A: { src: 'lettres/A.png', h: 1.3, dy: -0.04 } };
+  var V = { tol: 0.012, spike: 0.16, spikeAngle: 105 };
+  var SZ = 1.28;                                          // taille de police / hauteur de lettre   // pointes sur les angles vifs
 
   var canvas = document.getElementById('mur');
   var ctx = canvas.getContext('2d');
@@ -74,7 +79,7 @@
   var bctx = bed.getContext('2d');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var W, H, DPR, G = 2, gw, gh, FS, GAP;
-  var pieces = [], info = {}, mortar = null;
+  var pieces = [], info = {}, imgs = {}, photoSlots = [];
   var t0 = 0, running = false;
 
   /* ---------- Hasard reproductible ---------- */
@@ -433,212 +438,280 @@
     });
   }
 
-  /* ---------- Construction de la pièce ---------- */
+
+  /* ---------- Construction ---------- */
   function build() {
     W = window.innerWidth; H = window.innerHeight;
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = bed.width = Math.round(W * DPR);
     canvas.height = bed.height = Math.round(H * DPR);
     gw = Math.ceil(W / G); gh = Math.ceil(H / G);
-    R = rng(17);
-    pieces = [];
-    var N = gw * gh, k;
+    R = rng(23);
+    pieces = []; photoSlots = [];
+    var N = gw * gh, k, i;
 
-    // 1. Lettres : capitales grasses, un peu tournées, pointes aux angles.
-    var off = document.createElement('canvas'); off.width = gw; off.height = gh;
-    var o = off.getContext('2d', { willReadFrequently: true });
-    var oneLine = W / H > 1.6;
-    var lines = oneLine ? [NAME.join(' ')] : NAME;
-    var KERN = 1.03;
-    o.font = '100px ' + FONT;
-    var widest = Math.max.apply(null, lines.map(function (t) { return o.measureText(t).width * KERN; }));
-    FS = Math.min(W * (W < 600 ? 0.78 : 0.74) / widest * 100, (H - 150) * (oneLine ? 0.42 : 0.27));
-    GAP = Math.max(1.6, FS * 0.009);
-    var lineH = FS * 1.3, top = (H - 70) / 2 - (lines.length * lineH) / 2 + FS * 0.9;
-    o.save(); o.scale(1 / G, 1 / G);
-    o.textAlign = 'center'; o.textBaseline = 'alphabetic'; o.fillStyle = '#000';
-    lines.forEach(function (text, li) {
-      o.font = FS + 'px ' + FONT;
-      var ws = Array.from(text).map(function (ch) { return o.measureText(ch).width * KERN; });
-      var total = ws.reduce(function (a, b) { return a + b; }, 0);
-      var x = W / 2 - total / 2 + (lines.length > 1 ? (li ? 1 : -1) * FS * 0.1 : 0);
-      Array.from(text).forEach(function (ch, i) {
-        if (ch !== ' ') {
-          o.save();
-          o.translate(x + ws[i] / 2, top + li * lineH + (R() - 0.5) * FS * 0.08);
-          o.rotate((R() - 0.5) * 0.07);
-          o.transform(1, 0, -0.06, 1, 0, 0);
-          o.font = FS * (0.96 + R() * 0.1) + 'px ' + FONT;
-          o.fillText(ch, 0, 0);
-          o.restore();
+    // 1. Mise en page : largeur de chaque lettre (photo ou police).
+    var m = document.createElement('canvas').getContext('2d');
+    m.font = '100px ' + FONT;
+    function itemW(ch) {
+      if (PHOTOS[ch]) { var im = imgs[ch]; return PHOTOS[ch].h * im.width / im.height * 100 * 0.86; }
+      return m.measureText(ch).width * SZ * 1.02 + 6;
+    }
+    var oneLine = W / H > 2.2;
+    var lines = oneLine ? [NAME[0].concat([' '], NAME[1])] : NAME;
+    function lineW(l) { return l.reduce(function (s, ch) { return s + (ch === ' ' ? 40 : itemW(ch)); }, 0) / 100; }
+    var maxW = Math.max.apply(null, lines.map(lineW));
+    var top = 70, bottom = W < 520 ? 140 : 90;
+    FS = Math.min(W * (W < 600 ? 0.9 : 0.84) / maxW, (H - top - bottom) / (lines.length * 1.5 + 0.25));
+    GAP = Math.max(1.2, FS * 0.012);
+    var lineH = FS * 1.5;
+    var y0 = top + (H - top - bottom - lines.length * lineH) / 2 + FS * 0.25;
+
+    var idCanvas = document.createElement('canvas'); idCanvas.width = gw; idCanvas.height = gh;
+    var ic = idCanvas.getContext('2d', { willReadFrequently: true });
+    var photoCanvas = document.createElement('canvas'); photoCanvas.width = gw; photoCanvas.height = gh;
+    var pc = photoCanvas.getContext('2d', { willReadFrequently: true });
+    var letters = [];
+    lines.forEach(function (l, li) {
+      var x = W / 2 - lineW(l) * FS / 2 + (lines.length > 1 ? (li ? 0.15 : -0.15) * FS : 0);
+      var base = y0 + li * lineH + FS;              // ligne de base
+      l.forEach(function (ch) {
+        if (ch === ' ') { x += 0.4 * FS; return; }
+        var w = itemW(ch) / 100 * FS;
+        if (PHOTOS[ch]) {
+          var ph = PHOTOS[ch], hh = ph.h * FS, ww = hh * imgs[ch].width / imgs[ch].height;
+          var slot = { ch: ch, x: x + w / 2 - ww / 2, y: base - FS * 1.08 + ph.dy * FS - (hh - FS * 1.25) / 2, w: ww, h: hh };
+          photoSlots.push(slot);
+          pc.drawImage(imgs[ch], slot.x / G, slot.y / G, ww / G, hh / G);
+        } else {
+          var id = letters.length + 1;
+          letters.push({ ch: ch, x: x + w / 2, base: base + FS * 0.12, rot: (R() - 0.5) * 0.16, sc: SZ * (0.95 + R() * 0.12), id: id });
+          ic.save(); ic.scale(1 / G, 1 / G);
+          ic.translate(x + w / 2, base); ic.rotate(letters[id - 1].rot); ic.transform(1, 0, -0.2, 1, 0, 0);
+          ic.font = FS * letters[id - 1].sc + 'px ' + FONT; ic.textAlign = 'center';
+          ic.fillStyle = 'rgb(' + id + ',0,0)';
+          ic.fillText(ch, 0, 0);
+          ic.restore();
         }
-        x += ws[i];
+        x += w;
       });
     });
-    o.restore();
-    var img = o.getImageData(0, 0, gw, gh).data, F = new Uint8Array(N);
-    for (k = 0; k < N; k++) F[k] = img[k * 4 + 3] > 110 ? 1 : 0;
+    var idData = ic.getImageData(0, 0, gw, gh).data, phData = pc.getImageData(0, 0, gw, gh).data;
+    var F = new Uint8Array(N), LID = new Uint8Array(N), P = new Uint8Array(N);
+    for (k = 0; k < N; k++) {
+      if (idData[k * 4 + 3] > 110) { F[k] = 1; LID[k] = idData[k * 4]; }
+      if (phData[k * 4 + 3] > 40) P[k] = 1;
+    }
+    // Déformation douce : les lettres gonflent et ondulent comme les formes des photos.
+    (function () {
+      var F2 = new Uint8Array(N), L2 = new Uint8Array(N), lam = FS * 0.55 / G, amp = FS * 0.055 / G;
+      var p1 = R() * 6, p2 = R() * 6;
+      for (var y = 0; y < gh; y++) for (var x = 0; x < gw; x++) {
+        var sx = Math.round(x + amp * Math.sin(y / lam + p1) + amp * 0.6 * Math.sin((x + y) / (lam * 1.7) + p2));
+        var sy = Math.round(y + amp * Math.sin(x / lam + p2));
+        if (sx < 0 || sy < 0 || sx >= gw || sy >= gh) continue;
+        var kk = sy * gw + sx; F2[y * gw + x] = F[kk]; L2[y * gw + x] = LID[kk];
+      }
+      F = F2; LID = L2;
+    })();
     F = sharpen(F, V, FS);
+    for (k = 0; k < N; k++) if (F[k] && !LID[k]) {                // pointes ajoutées : rattacher à la lettre voisine
+      for (var r2 = 1; r2 < 30 && !LID[k]; r2++) {
+        var cand = [k - r2, k + r2, k - r2 * gw, k + r2 * gw];
+        for (i = 0; i < 4; i++) if (cand[i] >= 0 && cand[i] < N && LID[cand[i]]) { LID[k] = LID[cand[i]]; break; }
+      }
+    }
 
-    // 2. Filet blanc à l'intérieur des lettres, côté lumière (haut et gauche).
-    var DF = edt(F, gw, gh), shineW = Math.max(FS * 0.045, 6);
-    var S = new Uint8Array(N), Fi = new Uint8Array(N);
+    // 2. Dans chaque lettre : un dôme blanc en haut, séparé du vert par un trait noir.
+    var bbox = letters.map(function () { return [Infinity, -Infinity, Infinity, -Infinity]; });
+    for (k = 0; k < N; k++) if (F[k] && LID[k]) {
+      var b = bbox[LID[k] - 1], gx = k % gw, gy = (k / gw) | 0;
+      b[0] = Math.min(b[0], gx); b[1] = Math.max(b[1], gx); b[2] = Math.min(b[2], gy); b[3] = Math.max(b[3], gy);
+    }
+    letters.forEach(function (L, j) {
+      L.bb = bbox[j];
+      L.split = 0.2 + R() * 0.12; L.tiltS = (R() - 0.5) * 0.5; L.wave = R() * 6; L.flip = R() < 0.5;
+    });
+    var ROWL = Math.max(4, FS * 0.028);
+    var Wt = new Uint8Array(N), Gr = new Uint8Array(N), Bl = new Uint8Array(N);
     for (k = 0; k < N; k++) {
       if (!F[k]) continue;
-      if (DF[k] <= shineW) {
-        var dx = (DF[k + 1] || 0) - (DF[k - 1] || 0), dy = (DF[k + gw] || 0) - (DF[k - gw] || 0);
-        if ((dx + dy) / (Math.hypot(dx, dy) || 1) > 0.55) { S[k] = 1; continue; }
-      }
-      Fi[k] = 1;
+      var L2 = letters[(LID[k] || 1) - 1], bb2 = L2.bb, gx2 = k % gw, gy2 = (k / gw) | 0;
+      var u = (gx2 - bb2[0]) / Math.max(1, bb2[1] - bb2[0]), v = (gy2 - bb2[2]) / Math.max(1, bb2[3] - bb2[2]);
+      var cut = L2.split + L2.tiltS * (u - 0.5) + 0.22 * Math.pow(u - 0.5, 2) + 0.04 * Math.sin(u * 5 + L2.wave);
+      var dpx = (v - cut) * (bb2[3] - bb2[2]) * G;              // distance verticale au trait, en px
+      if (Math.abs(dpx) < ROWL * 0.35) Bl[k] = 1;
+      else if (dpx < 0) Wt[k] = 1; else Gr[k] = 1;
     }
-    // 3. Contour bleu nuit, 3D violette vers le bas à gauche, second contour.
+    // 3. Contour noir, bande vert sombre, puis relief vert profond vers le bas.
     var notF = new Uint8Array(N); for (k = 0; k < N; k++) notF[k] = 1 - F[k];
-    var dOutF = edt(notF, gw, gh), lineW = FS * 0.05;
-    var O = new Uint8Array(N), FO = new Uint8Array(N);
-    for (k = 0; k < N; k++) { O[k] = !F[k] && dOutF[k] <= lineW ? 1 : 0; FO[k] = F[k] | O[k]; }
-    var depth = FS * 0.16, ex = -0.3, ey = 1, el = Math.hypot(ex, ey);
+    var dOut = edt(notF, gw, gh);
+    var O = new Uint8Array(N), O2 = new Uint8Array(N), FO = new Uint8Array(N);
+    for (k = 0; k < N; k++) {
+      if (F[k]) { FO[k] = 1; continue; }
+      if (dOut[k] <= ROWL * 0.75) O[k] = FO[k] = 1;
+      else if (dOut[k] <= ROWL * 2.0) O2[k] = FO[k] = 1;
+    }
+    var depth = FS * 0.17, ex = -0.25, ey = 1, el = Math.hypot(ex, ey);
     ex = ex / el * depth / G; ey = ey / el * depth / G;
     var E = new Uint8Array(N), steps = Math.ceil(depth / G);
-    for (var gy = 0; gy < gh; gy++) for (var gx = 0; gx < gw; gx++) {
-      if (!FO[gy * gw + gx]) continue;
+    for (var yy = 0; yy < gh; yy++) for (var xx = 0; xx < gw; xx++) {
+      if (!FO[yy * gw + xx]) continue;
       for (var st = 1; st <= steps; st++) {
-        var x2 = Math.round(gx + ex * st / steps), y2 = Math.round(gy + ey * st / steps);
+        var x2 = Math.round(xx + ex * st / steps), y2 = Math.round(yy + ey * st / steps);
         if (x2 >= 0 && y2 >= 0 && x2 < gw && y2 < gh && !FO[y2 * gw + x2]) E[y2 * gw + x2] = 1;
       }
     }
     var notU = new Uint8Array(N); for (k = 0; k < N; k++) notU[k] = FO[k] || E[k] ? 0 : 1;
-    var dOutU = edt(notU, gw, gh);
-    var O2 = new Uint8Array(N);
-    for (k = 0; k < N; k++) O2[k] = notU[k] && dOutU[k] <= FS * 0.04 ? 1 : 0;
-    // 4. Nuage de fond autour de la pièce, au bord irrégulier.
-    var C = new Uint8Array(N), a1 = R() * 6, a2 = R() * 6, a3 = R() * 6;
-    for (gy = 0; gy < gh; gy++) for (gx = 0; gx < gw; gx++) {
-      k = gy * gw + gx;
-      if (!notU[k] || O2[k]) continue;
-      var px = gx * G, py = gy * G;
-      var n = (Math.sin(px / FS * 2.1 + a1) + Math.sin(py / FS * 2.7 + a2) + Math.sin((px + py) / FS * 1.3 + a3)) / 3;
-      if (dOutU[k] <= FS * (0.42 + 0.22 * n)) C[k] = 1;
-    }
+    var dU = edt(notU, gw, gh), O3 = new Uint8Array(N);
+    for (k = 0; k < N; k++) O3[k] = notU[k] && dU[k] <= ROWL * 0.8 ? 1 : 0;
+    // Les photos passent devant : rien n'est posé sous elles.
+    [Wt, Gr, Bl, O, O2, E, O3].forEach(function (M) { for (k = 0; k < N; k++) if (P[k]) M[k] = 0; });
 
-    // Lit de mortier sous toute la zone carrelée.
-    var mort = document.createElement('canvas'); mort.width = gw; mort.height = gh;
-    var mc = mort.getContext('2d'), md = mc.createImageData(gw, gh), gr = hex(GROUT);
-    for (k = 0; k < N; k++) if (!notU[k] || O2[k] || C[k]) { md.data[k * 4] = gr[0]; md.data[k * 4 + 1] = gr[1]; md.data[k * 4 + 2] = gr[2]; md.data[k * 4 + 3] = 255; }
-    mc.putImageData(md, 0, 0);
-    mortar = mort;
-
-    // 5. Pose de chaque zone, du bord vers l'intérieur, en rangées.
+    // 4. Pose en rangées qui suivent les formes.
     occ = new Uint8Array(N);
     function lay(mask, row, lenK, kind) {
-      ROW = Math.max(row, 5);
+      ROW = Math.max(row, 4);
       var D = edt(mask, gw, gh);
       layRows(mask, D, kind, lenK);
       fillGaps(mask, D, kind);
     }
-    lay(S, shineW, 1.7, 'shine');
-    lay(O, lineW, 1.5, 'line');
-    lay(Fi, FS * 0.072, 1.2, 'fill');
-    lay(E, FS * 0.062, 1.05, 'depth');
-    lay(O2, FS * 0.04, 1.6, 'outer');
-    lay(C, FS * 0.1, 1.2, 'cloud');
+    lay(Bl, ROWL * 0.7, 1.8, 'cutline');
+    lay(O, ROWL * 0.75, 1.8, 'line');
+    lay(Wt, ROWL, 1.25, 'white');
+    lay(Gr, ROWL, 1.25, 'green');
+    lay(O2, ROWL * 1.3, 1.3, 'band');
+    lay(E, ROWL * 1.1, 1.1, 'depth');
+    lay(O3, ROWL * 0.8, 1.7, 'line');
 
-    // Couleurs, et taches de couleur dans le nuage.
-    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    pieces.forEach(function (p) {
-      if (p.kind === 'cloud') return;
-      minX = Math.min(minX, p.c[0]); maxX = Math.max(maxX, p.c[0]); minY = Math.min(minY, p.c[1]); maxY = Math.max(maxY, p.c[1]);
-    });
-    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: (maxX - minX) / 2, ry: (maxY - minY) / 2 };
-    var b1 = R() * 6, b2 = R() * 6;
-    pieces.forEach(function (p) {
-      var col;
-      if (p.kind === 'fill') col = R() < 0.03 ? pick(SHINE) : pick(FILL);
-      else if (p.kind === 'shine') col = pick(SHINE);
-      else if (p.kind === 'line' || p.kind === 'outer') col = pick(NAVY);
-      else if (p.kind === 'depth') col = R() < 0.08 ? pick(NAVY) : pick(DEPTH);
-      else {
-        var m = (Math.sin(p.c[0] / FS * 3.1 + b1) + Math.sin(p.c[1] / FS * 3.7 + b2)) / 2;
-        var m2 = (Math.sin(p.c[0] / FS * 1.7 + b2) + Math.sin(p.c[1] / FS * 2.3 + b1)) / 2;
-        if (m > 0.3) col = pick(PATCH[Math.min(3, Math.floor((m2 + 1) * 2))]);
-        else col = pick(PEACH);
+    // 5. Couleurs : dégradés par tesselle, comme sur les photos.
+    var tiles = pieces;
+    tiles.forEach(function (p) {
+      var gx = clamp((p.c[0] / G) | 0, 0, gw - 1), gy = clamp((p.c[1] / G) | 0, 0, gh - 1), kk = gy * gw + gx;
+      var L3 = letters[(LID[kk] || 1) - 1], bb3 = L3.bb;
+      var v = clamp((gy - bb3[2]) / Math.max(1, bb3[3] - bb3[2]), 0, 1);
+      var u = clamp((gx - bb3[0]) / Math.max(1, bb3[1] - bb3[0]), 0, 1);
+      var r = R(), col;
+      if (p.kind === 'white') col = r < 0.82 ? pick(WHITE) : pick(LIGHT);
+      else if (p.kind === 'green') {
+        var t = v + (r - 0.5) * 0.12 + (L3.flip ? u : 1 - u) * 0.12;
+        col = t < 0.5 ? pick(LIGHT) : t < 0.78 ? pick(MID) : t < 0.95 ? pick(TEAL) : pick(DEEP);
       }
+      else if (p.kind === 'cutline' || p.kind === 'line') col = pick(BLACK);
+      else if (p.kind === 'band') col = R() < 0.7 ? pick(DEEP) : pick(DARK);
+      else col = R() < 0.75 ? pick(DARK) : pick(DEEP);
       p.rgb = hex(col);
       p.tone = (R() - 0.5) * 0.1;
-      var gx = Math.min(gw - 1, Math.max(0, (p.c[0] / G) | 0)), gy = Math.min(gh - 1, Math.max(0, (p.c[1] / G) | 0));
-      p.dist = p.kind === 'cloud' ? dOutU[gy * gw + gx] : 0;
     });
-    info.count = pieces.length;
+
+    // 6. Les photos G et A, découpées en éclats pour l'animation.
+    photoSlots.forEach(function (s, si) {
+      var im = imgs[s.ch];
+      var full = document.createElement('canvas');
+      full.width = Math.ceil(s.w * DPR); full.height = Math.ceil(s.h * DPR);
+      var fc = full.getContext('2d', { willReadFrequently: true });
+      fc.drawImage(im, 0, 0, full.width, full.height);
+      var alpha = fc.getImageData(0, 0, full.width, full.height).data;
+      s.full = full;
+      var cell = FS * 0.13, cols = Math.max(3, Math.round(s.w / cell)), rows = Math.max(3, Math.round(s.h / cell));
+      var mesh = [];
+      for (var j = 0; j <= rows; j++) {
+        mesh[j] = [];
+        for (var c = 0; c <= cols; c++) {
+          var jx = c > 0 && c < cols ? (R() - 0.5) * 0.6 : 0, jy = j > 0 && j < rows ? (R() - 0.5) * 0.6 : 0;
+          mesh[j][c] = [s.x + (c + jx) / cols * s.w, s.y + (j + jy) / rows * s.h];
+        }
+      }
+      s.pieces = 0;
+      for (j = 0; j < rows; j++) for (c = 0; c < cols; c++) {
+        var q = [mesh[j][c], mesh[j][c + 1], mesh[j + 1][c + 1], mesh[j + 1][c]];
+        // L'éclat contient-il de la mosaïque ?
+        var cnt = 0;
+        for (var a = 0.2; a < 1; a += 0.3) for (var b3 = 0.2; b3 < 1; b3 += 0.3) {
+          var px = (q[0][0] * (1 - a) + q[1][0] * a) * (1 - b3) + (q[3][0] * (1 - a) + q[2][0] * a) * b3;
+          var py = (q[0][1] * (1 - a) + q[1][1] * a) * (1 - b3) + (q[3][1] * (1 - a) + q[2][1] * a) * b3;
+          var ax = clamp(((px - s.x) * DPR) | 0, 0, full.width - 1), ay = clamp(((py - s.y) * DPR) | 0, 0, full.height - 1);
+          if (alpha[(ay * full.width + ax) * 4 + 3] > 40) cnt++;
+        }
+        if (!cnt) continue;
+        var bx = Math.floor(Math.min(q[0][0], q[3][0])) - 1, by = Math.floor(Math.min(q[0][1], q[1][1])) - 1;
+        var bw = Math.ceil(Math.max(q[1][0], q[2][0])) + 1 - bx, bh = Math.ceil(Math.max(q[2][1], q[3][1])) + 1 - by;
+        var pcv = document.createElement('canvas'); pcv.width = Math.ceil(bw * DPR); pcv.height = Math.ceil(bh * DPR);
+        var pcx = pcv.getContext('2d');
+        pcx.scale(DPR, DPR); pcx.translate(-bx, -by);
+        pcx.beginPath(); q.forEach(function (v2, n) { if (n) pcx.lineTo(v2[0], v2[1]); else pcx.moveTo(v2[0], v2[1]); }); pcx.closePath();
+        pcx.clip();
+        pcx.drawImage(im, s.x, s.y, s.w, s.h);
+        pieces.push({ img: pcv, x0: bx, y0: by, w: bw, h: bh, c: centroid(q), q: q, slot: si, kind: 'photo' });
+        s.pieces++;
+      }
+    });
+
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    pieces.forEach(function (p) {
+      minX = Math.min(minX, p.c[0]); maxX = Math.max(maxX, p.c[0]); minY = Math.min(minY, p.c[1]); maxY = Math.max(maxY, p.c[1]);
+    });
+    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: Math.max(1, (maxX - minX) / 2), ry: Math.max(1, (maxY - minY) / 2) };
     plan();
   }
 
   /* ---------- Animation : du spectateur vers le mur, du centre vers les bords ---------- */
   var IMPACT = 150;
   function plan() {
-    var end = 0, last = 0, maxD = 1;
+    var last = 0;
     pieces.forEach(function (p) {
       p.r1 = R(); p.r2 = R(); p.r3 = R(); p.r4 = R();
-      if (p.kind === 'cloud') { maxD = Math.max(maxD, p.dist); return; }
-      var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.5)));
-      p.delay = 120 + dn * 1500 + p.r1 * 260 + (p.kind === 'depth' ? 200 : 0);
-      p.dur = 460 + p.r2 * 160;
-      end = Math.max(end, p.delay + p.dur);
-    });
-    pieces.forEach(function (p) {
-      if (p.kind === 'cloud') {
-        var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.5)));
-        p.delay = end * 0.6 + dn * 900 + (p.dist / maxD) * 500 + p.r1 * 300;
-        p.dur = 380 + p.r2 * 140;
-      }
-      p.rot0 = (p.r3 - 0.5) * 2.6;
+      var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.6)));
+      var late = p.kind === 'depth' || p.kind === 'band' ? 220 : 0;
+      p.delay = 120 + dn * 1700 + p.r1 * 260 + late;
+      p.dur = p.img ? 600 + p.r2 * 180 : 460 + p.r2 * 160;
+      p.rot0 = (p.r3 - 0.5) * (p.img ? 2 : 2.6);
       p.tilt0 = 0.5 + p.r4 * 0.8;
       p.axis = p.r1 * Math.PI;
       p.lx = (p.r2 - 0.5) * FS * 0.9; p.ly = (p.r3 - 0.5) * FS * 0.6 - FS * 0.2;
-      p.placed = false;
       last = Math.max(last, p.delay + p.dur + IMPACT);
     });
     info.total = last;
   }
 
-  function path(c, q, r) {
-    var n = q.length;
+  function path(c, q) {
     c.beginPath();
-    for (var i = 0; i < n; i++) {
-      var a = q[(i - 1 + n) % n], b = q[i], d = q[(i + 1) % n];
-      if (i === 0) c.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
-      c.arcTo(b[0], b[1], (b[0] + d[0]) / 2, (b[1] + d[1]) / 2, r);
-    }
+    c.moveTo(q[0][0], q[0][1]);
+    for (var i = 1; i < q.length; i++) c.lineTo(q[i][0], q[i][1]);
     c.closePath();
   }
 
-  function drawWall() {
+  function drawBase() {
     var c = bctx;
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
     c.fillStyle = WALL;
     c.fillRect(0, 0, W, H);
     var gr = rng(9);
-    for (var i = 0; i < W * H / 40; i++) {
-      c.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,30,.08)';
-      c.fillRect(gr() * W, gr() * H, 1 + gr() * 2, 1 + gr() * 2);
+    for (var i = 0; i < W * H / 60; i++) {
+      c.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.25)';
+      c.fillRect(gr() * W, gr() * H, 1 + gr() * 1.5, 1 + gr() * 1.5);
     }
-    // Mortier frais là où les éclats vont se poser.
-    c.imageSmoothingEnabled = true;
-    c.drawImage(mortar, 0, 0, gw * G, gh * G);
   }
 
   function placeOnBed(p) {
-    var c = bctx, r = Math.min(2, FS * 0.008);
-    var minI = 0, maxI = 0, q = p.q;
+    var c = bctx;
+    if (p.img) {
+      c.drawImage(p.img, p.x0, p.y0, p.w, p.h);
+      var s = photoSlots[p.slot];
+      if (++s.done === s.pieces) c.drawImage(s.full, s.x, s.y, s.w, s.h);   // la photo, telle quelle
+      return;
+    }
+    var q = p.q, minI = 0, maxI = 0;
     for (var i = 1; i < q.length; i++) {
       if (q[i][0] + q[i][1] < q[minI][0] + q[minI][1]) minI = i;
       if (q[i][0] + q[i][1] > q[maxI][0] + q[maxI][1]) maxI = i;
     }
     var g = c.createLinearGradient(q[minI][0], q[minI][1], q[maxI][0], q[maxI][1]);
-    g.addColorStop(0, css(p.rgb, p.tone + 0.14));
+    g.addColorStop(0, css(p.rgb, p.tone + 0.12));
     g.addColorStop(0.5, css(p.rgb, p.tone));
     g.addColorStop(1, css(p.rgb, p.tone - 0.1));
     c.fillStyle = g;
-    path(c, q, r); c.fill();
-    c.strokeStyle = 'rgba(0,0,0,.14)'; c.lineWidth = 0.6; c.stroke();
+    path(c, q); c.fill();
   }
 
   function drawFlying(p, prog, impact) {
@@ -648,27 +721,29 @@
     var px = p.c[0] + (p.c[0] - W / 2) * (persp - 1) * 0.25 + p.lx * h;
     var py = p.c[1] + (p.c[1] - H / 2) * (persp - 1) * 0.25 + p.ly * h;
     var rot = p.rot0 * h, tilt = Math.cos(p.tilt0 * h);
+    var alpha = Math.min(1, prog * 5) * (0.55 + 0.45 * (1 - h));
+    if (p.img) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(px, py); ctx.rotate(rot + p.axis); ctx.scale(tilt * scale, scale); ctx.rotate(-p.axis);
+      ctx.drawImage(p.img, p.x0 - p.c[0], p.y0 - p.c[1], p.w, p.h);
+      ctx.restore();
+      return;
+    }
     var ca = Math.cos(p.axis), sa = Math.sin(p.axis), cr = Math.cos(rot), sr = Math.sin(rot);
-    function tf(v, ox, oy, k) {
+    function tf(v) {
       var x = v[0] - p.c[0], y = v[1] - p.c[1];
       var along = (x * ca + y * sa) * tilt, across = -x * sa + y * ca;
-      x = (along * ca - across * sa) * k; y = (along * sa + across * ca) * k;
-      return [ox + x * cr - y * sr, oy + x * sr + y * cr];
+      x = (along * ca - across * sa) * scale; y = (along * sa + across * ca) * scale;
+      return [px + x * cr - y * sr, py + x * sr + y * cr];
     }
-    if (h > 0.001) {
-      ctx.globalAlpha = 0.06 + 0.3 * Math.pow(1 - h, 2);
-      ctx.fillStyle = 'rgb(20,10,40)';
-      path(ctx, p.q.map(function (v) { return tf(v, p.c[0] + h * FS * 0.25, p.c[1] + h * FS * 0.35, 1 + h * 0.6); }), 1);
-      ctx.fill();
-    }
-    var alpha = Math.min(1, prog * 5) * (0.55 + 0.45 * (1 - h));
     ctx.globalAlpha = alpha;
     ctx.fillStyle = css(p.rgb, p.tone);
-    path(ctx, p.q.map(function (v) { return tf(v, px, py, scale); }), 1.2);
+    path(ctx, p.q.map(tf));
     ctx.fill();
     var shade = (1 - Math.abs(tilt)) * 0.45;
     if (shade > 0.02) { ctx.globalAlpha = alpha * shade; ctx.fillStyle = '#000'; ctx.fill(); }
-    if (impact >= 0 && impact < 0.6) { ctx.globalAlpha = 0.4 * (1 - impact / 0.6); ctx.fillStyle = '#fff'; ctx.fill(); }
+    if (impact >= 0 && impact < 0.6) { ctx.globalAlpha = 0.35 * (1 - impact / 0.6); ctx.fillStyle = '#fff'; ctx.fill(); }
     ctx.globalAlpha = 1;
   }
 
@@ -696,9 +771,11 @@
   }
 
   function play() {
-    drawWall();
+    drawBase();
     pieces.forEach(function (p) { p.placed = false; });
+    photoSlots.forEach(function (s) { s.done = 0; });
     if (reduceMotion) {
+      bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       pieces.forEach(function (p) { placeOnBed(p); p.placed = true; });
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bed, 0, 0);
       return;
@@ -707,32 +784,37 @@
     if (!running) { running = true; requestAnimationFrame(frame); }
   }
 
+  function count() {
+    document.getElementById('nb-pieces').textContent = pieces.length.toLocaleString('fr-FR') + ' pièces';
+    window.__count = pieces.length;
+  }
   document.getElementById('rejouer').addEventListener('click', play);
   window.addEventListener('keydown', function (e) {
     if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
   });
-  var timer, lastW = 0, lastH = 0;
+  var timer, lastW = 0, lastH = 0, started = false;
   window.addEventListener('resize', function () {
+    if (!started) return;
     clearTimeout(timer);
     timer = setTimeout(function () {
       if (Math.abs(window.innerWidth - lastW) < 2 && Math.abs(window.innerHeight - lastH) < 60) return;
       lastW = window.innerWidth; lastH = window.innerHeight;
-      build(); play();
-      document.getElementById('nb-pieces').textContent = pieces.length.toLocaleString('fr-FR') + ' pièces';
+      build(); play(); count();
     }, 250);
   });
 
-  var started = false;
-  function go() {
-    if (started) return;
-    started = true; lastW = window.innerWidth; lastH = window.innerHeight;
-    build(); play();
-    window.__count = pieces.length;
-    document.getElementById('nb-pieces').textContent = pieces.length.toLocaleString('fr-FR') + ' pièces';
+  function loadImg(ch) {
+    return new Promise(function (res) {
+      var im = new Image();
+      im.onload = function () { imgs[ch] = im; res(); };
+      im.onerror = function () { res(); };
+      im.src = PHOTOS[ch].src;
+    });
   }
-  if (document.fonts && document.fonts.load) {
-    document.fonts.load('100px "Bowlby One"').then(go, go);
-    setTimeout(go, 2500);
-  } else go();
+  var fontReady = document.fonts && document.fonts.load ? document.fonts.load('100px "Titan One"').catch(function () {}) : Promise.resolve();
+  Promise.all([fontReady, loadImg('G'), loadImg('A')]).then(function () {
+    started = true; lastW = window.innerWidth; lastH = window.innerHeight;
+    build(); play(); count();
+  });
 })();
 </script>
