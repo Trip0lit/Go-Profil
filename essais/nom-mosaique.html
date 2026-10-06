@@ -1,7 +1,7 @@
 <title>Galvez Martin en mosaïque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Knewave&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Shojumaru&family=Bangers&family=Kanit:ital,wght@1,900&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
 <style>
   /* Une seule scène : un mur en mosaïque, le nom en pièce de graffiti. Commandes flottantes en bas. */
   :root {
@@ -9,8 +9,7 @@
     --panel: rgba(28, 24, 22, .78);
     --panel-ink: #f4f1ea;
     --panel-soft: rgba(244, 241, 234, .6);
-    --display: "Knewave", "Arial Black", sans-serif;
-    --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: light;
   }
   html, body { height: 100%; }
@@ -43,10 +42,10 @@
 
 <canvas id="mur" role="img" aria-label="Galvez Martin, écrit en mosaïque façon graffiti"></canvas>
 
-<div class="controls" role="group" aria-label="Réglages">
-  <button type="button" id="pal-lavande" data-pal="lavande" aria-pressed="true"><span class="swatch"><i style="background:#cdd7f5"></i><i style="background:#7c63d6"></i><i style="background:#f7b28c"></i></span>Lavande</button>
-  <button type="button" id="pal-menthe" data-pal="menthe" aria-pressed="false"><span class="swatch"><i style="background:#3fd27a"></i><i style="background:#1fb9b0"></i><i style="background:#0b4a3a"></i></span>Menthe</button>
-  <button type="button" id="pal-magenta" data-pal="magenta" aria-pressed="false"><span class="swatch"><i style="background:#d9d2f7"></i><i style="background:#c4508f"></i><i style="background:#1c1528"></i></span>Magenta</button>
+<div class="controls" role="group" aria-label="Choix de la version">
+  <button type="button" id="v-lame" data-variant="lame" aria-pressed="true"><span class="swatch"><i style="background:#cdd7f5"></i><i style="background:#7c63d6"></i><i style="background:#f7b28c"></i></span>1 Lame</button>
+  <button type="button" id="v-eclat" data-variant="eclat" aria-pressed="false"><span class="swatch"><i style="background:#3fd27a"></i><i style="background:#1fb9b0"></i><i style="background:#f4a9c1"></i></span>2 Éclat</button>
+  <button type="button" id="v-tranchant" data-variant="tranchant" aria-pressed="false"><span class="swatch"><i style="background:#e3dcf8"></i><i style="background:#c4508f"></i><i style="background:#1c1528"></i></span>3 Tranchant</button>
   <span class="sep" aria-hidden="true"></span>
   <button type="button" id="rejouer">↻ Rejouer</button>
 </div>
@@ -79,9 +78,10 @@
     },
     magenta: { // « DVO » : lavande pâle, magenta, noir
       fill: ['#e3dcf8', '#d4ccf4', '#cbc3f2', '#ede6fb', '#d9d2f7'],
+      fill2: ['#c4508f', '#d0609c', '#b84786', '#cf6aa3'],
       shine: ['#ffffff', '#f7f3ff'],
       line: ['#1c1528', '#221a31', '#16101f'],
-      depth: ['#c4508f', '#b23a7c', '#a8306f', '#cf5f9a'],
+      depth: ['#4a2a6e', '#3f2360', '#55307c', '#462868'],
       outer: ['#120c1c', '#0d0915'],
       cloud: ['#c14d8f', '#8a5ad0', '#e07ab0', '#a77de0', '#d6a3e8'],
       speck: ['#c4508f', '#8a5ad0']
@@ -99,7 +99,7 @@
 
   var W, H, DPR, G = 2;                            // G : résolution de la grille de calcul (px)
   var ROW;                                         // hauteur d'une rangée de tesselles
-  var tiles = [], layout = null, palName = 'lavande';
+  var tiles = [], layout = null;
   var t0 = 0, running = false, flying = [];
 
   /* ---------- Hasard reproductible ---------- */
@@ -292,7 +292,7 @@
       }
     }
     var cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
-    tiles.push({ q: q, cx: cx, cy: cy, region: region });
+    tiles.push({ q: q, cx: cx, cy: cy, region: region, row: ROW });
     return true;
   }
 
@@ -370,67 +370,150 @@
     }
   }
 
+  /* ---------- Les trois versions ---------- */
+  var VARIANTS = {
+    lame: {      // pointes de pinceau, onde qui part du centre
+      font: '"Shojumaru"', style: '', grow: 0.028, skew: 0.04, rotJ: 0.07, kern: 0.95,
+      tol: 0.016, spike: 0.08, spikeAngle: 115, pal: 'lavande', fill: 'gradient', anim: 'onde'
+    },
+    eclat: {     // lettres penchées, les tesselles jaillissent du centre de l'écran
+      font: '"Bangers"', style: '', grow: 0.012, skew: 0.08, rotJ: 0.09, kern: 1.04,
+      tol: 0.018, spike: 0.1, spikeAngle: 125, pal: 'menthe', fill: 'gradient', anim: 'eclat'
+    },
+    tranchant: { // wildstyle : facettes franches, pointes longues, remplissage en deux tons
+      font: '"Kanit"', style: 'italic 900 ', grow: 0, skew: 0.1, rotJ: 0.1, kern: 1.06,
+      tol: 0.02, spike: 0.13, spikeAngle: 140, pal: 'magenta', fill: 'split', anim: 'tranchant'
+    }
+  };
+  var variant = 'lame';
+  var cache = {};
+
+  /* ---------- Lettres taillées en facettes ---------- */
+  // Simplifie une boucle (Ramer–Douglas–Peucker) : les courbes deviennent des facettes.
+  function rdp(pts, tol) {
+    if (pts.length < 3) return pts.slice();
+    var a = pts[0], b = pts[pts.length - 1], dmax = 0, idx = 0;
+    var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    for (var i = 1; i < pts.length - 1; i++) {
+      var d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + b[0] * a[1] - b[1] * a[0]) / l;
+      if (d > dmax) { dmax = d; idx = i; }
+    }
+    if (dmax <= tol) return [a, b];
+    var left = rdp(pts.slice(0, idx + 1), tol), right = rdp(pts.slice(idx), tol);
+    return left.slice(0, -1).concat(right);
+  }
+  function rdpLoop(pts, tol) {
+    var far = 0, dm = 0;
+    for (var i = 1; i < pts.length; i++) {
+      var d = Math.hypot(pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]);
+      if (d > dm) { dm = d; far = i; }
+    }
+    var a = rdp(pts.slice(0, far + 1), tol), b = rdp(pts.slice(far).concat([pts[0]]), tol);
+    return a.slice(0, -1).concat(b.slice(0, -1));
+  }
+
+  function sharpen(F, V, fs) {
+    var Ff = new Float32Array(F.length);
+    for (var k = 0; k < F.length; k++) Ff[k] = F[k];
+    var loops = contours(Ff, gw, gh, 0.5).filter(function (l) { return l.pts.length > 6; });
+    var c = document.createElement('canvas'); c.width = gw; c.height = gh;
+    var x = c.getContext('2d', { willReadFrequently: true });
+    function inside(px, py) {
+      var gx = (px / G) | 0, gy = (py / G) | 0;
+      return gx >= 0 && gy >= 0 && gx < gw && gy < gh && F[gy * gw + gx];
+    }
+    x.beginPath();
+    loops.forEach(function (l) {
+      var p = rdpLoop(l.pts, fs * V.tol), n = p.length;
+      if (n < 3) return;
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var a = p[(i - 1 + n) % n], v = p[i], b = p[(i + 1) % n];
+        var ax = a[0] - v[0], ay = a[1] - v[1], bx = b[0] - v[0], by = b[1] - v[1];
+        var la = Math.hypot(ax, ay) || 1, lb = Math.hypot(bx, by) || 1;
+        var ang = Math.acos(clamp((ax * bx + ay * by) / (la * lb), -1, 1)) * 180 / Math.PI;
+        var mx = ax / la + bx / lb, my = ay / la + by / lb, ml = Math.hypot(mx, my) || 1;
+        mx /= ml; my /= ml;
+        // Coin saillant (le dedans de l'angle est plein) : on l'étire en pointe.
+        if (ang < V.spikeAngle && inside(v[0] + mx * 3, v[1] + my * 3)) {
+          var len = fs * V.spike * Math.pow(1 - ang / V.spikeAngle, 0.7) * (0.6 + R() * 0.8);
+          out.push([v[0] - mx * len, v[1] - my * len]);
+        } else out.push(v);
+      }
+      x.moveTo(out[0][0] / G, out[0][1] / G);
+      for (var j = 1; j < out.length; j++) x.lineTo(out[j][0] / G, out[j][1] / G);
+      x.closePath();
+    });
+    x.fillStyle = '#000';
+    x.fill('evenodd');
+    var img = x.getImageData(0, 0, gw, gh).data, S2 = new Uint8Array(F.length);
+    for (k = 0; k < F.length; k++) S2[k] = img[k * 4 + 3] > 110 ? 1 : 0;
+    return S2;
+  }
+
   /* ---------- Construction du mur ---------- */
   function build() {
+    var V = VARIANTS[variant];
     W = window.innerWidth; H = window.innerHeight;
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = bed.width = Math.round(W * DPR);
-    canvas.height = bed.height = Math.round(H * DPR);
     gw = Math.ceil(W / G); gh = Math.ceil(H / G);
     R = rng(11);
     tiles = [];
 
-    // 1. Lettres : chaque lettre un peu tournée, décalée, qui chevauche sa voisine.
-    var font = getComputedStyle(document.documentElement).getPropertyValue('--display').trim();
+    // 1. Lettres : chaque lettre penchée, un peu tournée, qui chevauche sa voisine.
+    var font = V.style + '{size}px ' + V.font;
+    function f(size) { return font.replace('{size}', size); }
     var off = document.createElement('canvas'); off.width = gw; off.height = gh;
     var o = off.getContext('2d', { willReadFrequently: true });
     var oneLine = W / H > 1.25;
     var lines = oneLine ? [NAME.join(' ')] : NAME;
-    o.font = '100px ' + font;
-    var widest = Math.max.apply(null, lines.map(function (t) { return o.measureText(t).width * 0.95; }));
-    var fs = Math.min(W * 0.8 / widest * 100, H * (oneLine ? 0.36 : 0.24));
-    ROW = clamp(fs * 0.05, 6, 15);
+    o.font = f(100);
+    var widest = Math.max.apply(null, lines.map(function (t) { return o.measureText(t).width * V.kern; }));
+    var fs = Math.min(W * 0.76 / widest * 100, H * (oneLine ? 0.36 : 0.24));
+    // Lettres en tesselles fines (lisibles), fond en grosses tesselles : environ 60 % de pièces en moins.
+    var ROWP = clamp(fs * 0.046, 4.5, 15), ROWBG = clamp(Math.min(W, H) * 0.032, 12, 28);
+    ROW = ROWP;
     var lr = rng(5), glyphs = [];
-    var lineH = fs * 1.02, top = H / 2 - (lines.length * lineH) / 2 + fs * 0.78 - fs * 0.06;
+    var lineH = fs * 1.04, top = H / 2 - (lines.length * lineH) / 2 + fs * 0.8 - fs * 0.06;
     lines.forEach(function (text, li) {
-      o.font = fs + 'px ' + font;
-      var widths = Array.from(text).map(function (ch) { return o.measureText(ch).width * 0.93; });
+      o.font = f(fs);
+      var widths = Array.from(text).map(function (ch) { return o.measureText(ch).width * V.kern; });
       var total = widths.reduce(function (a, b) { return a + b; }, 0);
       var x = W / 2 - total / 2 + (lines.length > 1 ? (li ? 1 : -1) * fs * 0.12 : 0);
       Array.from(text).forEach(function (ch, i) {
-        glyphs.push({ ch: ch, x: x + widths[i] / 2, y: top + li * lineH + (lr() - .5) * fs * 0.08,
-                      rot: (lr() - .5) * 0.16, size: fs * (0.95 + lr() * 0.12) });
+        glyphs.push({ ch: ch, x: x + widths[i] / 2, y: top + li * lineH + (lr() - .5) * fs * 0.1,
+                      rot: (lr() - .5) * 2 * V.rotJ, size: fs * (0.94 + lr() * 0.14) });
         x += widths[i];
       });
     });
-    layout = { glyphs: glyphs, font: font };
-    function drawGlyphs(c, scale, stroke) {
-      c.save(); c.scale(scale, scale);
-      c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-      glyphs.forEach(function (g) {
-        if (g.ch === ' ') return;
-        c.save(); c.translate(g.x, g.y); c.rotate(g.rot);
-        c.font = g.size + 'px ' + font;
-        if (stroke) c.strokeText(g.ch, 0, 0); else c.fillText(g.ch, 0, 0);
-        c.restore();
-      });
-      c.restore();
-    }
-    o.fillStyle = '#000';
-    drawGlyphs(o, 1 / G);
+    o.save(); o.scale(1 / G, 1 / G);
+    o.textAlign = 'center'; o.textBaseline = 'alphabetic'; o.fillStyle = '#000';
+    glyphs.forEach(function (g) {
+      if (g.ch === ' ') return;
+      o.save(); o.translate(g.x, g.y); o.rotate(g.rot); o.transform(1, 0, -V.skew, 1, 0, 0);
+      o.font = f(g.size);
+      o.fillText(g.ch, 0, 0);
+      o.restore();
+    });
+    o.restore();
     var img = o.getImageData(0, 0, gw, gh).data, N = gw * gh, k;
     var F = new Uint8Array(N);
     for (k = 0; k < N; k++) F[k] = img[k * 4 + 3] > 110 ? 1 : 0;
+    if (V.grow > 0) {
+      var nf = new Uint8Array(N); for (k = 0; k < N; k++) nf[k] = 1 - F[k];
+      var dg = edt(nf, gw, gh);
+      for (k = 0; k < N; k++) if (dg[k] <= fs * V.grow) F[k] = 1;
+    }
+    F = sharpen(F, V, fs);
 
     // 2. Contour sombre autour des lettres.
     var notF = new Uint8Array(N); for (k = 0; k < N; k++) notF[k] = 1 - F[k];
     var dOutF = edt(notF, gw, gh);
-    var lineW = ROW * 1.15;
+    var lineW = ROW * 1.1;
     var O = new Uint8Array(N), FO = new Uint8Array(N);
     for (k = 0; k < N; k++) { O[k] = !F[k] && dOutF[k] <= lineW ? 1 : 0; FO[k] = F[k] | O[k]; }
 
-    // 3. Extrusion 3D : la forme est tirée vers le bas à gauche.
-    var depth = fs * 0.12, ex = -0.38, ey = 1, el = Math.hypot(ex, ey);
+    // 3. Extrusion 3D vers le bas à gauche.
+    var depth = fs * 0.13, ex = -0.4, ey = 1, el = Math.hypot(ex, ey);
     ex = ex / el * depth / G; ey = ey / el * depth / G;
     var E = new Uint8Array(N), steps = Math.ceil(depth / G);
     for (var gy = 0; gy < gh; gy++) for (var gx = 0; gx < gw; gx++) {
@@ -450,17 +533,18 @@
     var regions = [
       { mask: F, name: 'fill', len: 1.15 },
       { mask: O, name: 'line', len: 1.5 },
-      { mask: E, name: 'depth', len: 1.2 },
+      { mask: E, name: 'depth', len: 1.25 },
       { mask: O2, name: 'outer', len: 1.6 },
-      { mask: B, name: 'bg', len: 1.05 }
+      { mask: B, name: 'bg', len: 1.2 }
     ];
     regions.forEach(function (r) {
+      ROW = r.name === 'bg' ? ROWBG : ROWP;
       r.D = edt(r.mask, gw, gh);
       layRows(r.mask, r.D, r.name, r.len);
       fillGaps(r.mask, r.D, r.name);
     });
 
-    // Mesures utiles aux couleurs et à l'animation.
+    ROW = ROWP;
     var DF = regions[0].D, maxBg = 1;
     tiles.forEach(function (t) {
       var gx = clamp((t.cx / G) | 0, 0, gw - 1), gy = clamp((t.cy / G) | 0, 0, gh - 1), kk = gy * gw + gx;
@@ -468,47 +552,52 @@
       if (t.region === 'bg') maxBg = Math.max(maxBg, t.distBg);
       t.edge = t.region === 'fill' && DF[kk] < ROW * 1.05;
       if (t.edge) {
-        // normale sortante : du côté haut-gauche, la lumière accroche (reflet de bombe).
         var dx = (DF[kk + 1] || 0) - (DF[kk - 1] || 0), dy = (DF[kk + gw] || 0) - (DF[kk - gw] || 0);
         t.lit = (dx + dy) / (Math.hypot(dx, dy) || 1) > 0.9;
       }
       t.r1 = R(); t.r2 = R(); t.r3 = R(); t.r4 = R();
     });
-    layout.maxBg = maxBg;
-    layout.fs = fs;
-    layout.drawGlyphs = drawGlyphs;
-    paint();
-    plan();
+    layout = { maxBg: maxBg, fs: fs, glyphs: glyphs, lineH: lineH, top: top, lines: lines.length };
+    paint(V);
+    plan(V);
+    return { tiles: tiles, layout: layout, ROW: ROW, W: W, H: H };
   }
 
   /* ---------- Couleurs ---------- */
-  function paint() {
-    var P = PALETTES[palName];
+  function paint(V) {
+    var P = PALETTES[V.pal];
     var cr = rng(3), a1 = cr() * 6, a2 = cr() * 6, a3 = cr() * 6;
     var minY = Infinity, maxY = -Infinity;
     tiles.forEach(function (t) { if (t.region === 'fill') { minY = Math.min(minY, t.cy); maxY = Math.max(maxY, t.cy); } });
+    var dash = 0;
     tiles.forEach(function (t) {
       var r = cr(), c;
       if (t.region === 'fill') {
-        var g = (t.cy - minY) / Math.max(1, maxY - minY);           // dégradé vertical
-        var idx = clamp(Math.floor((g * 0.8 + r * 0.45) * P.fill.length * 0.8), 0, P.fill.length - 1);
-        c = P.fill[idx];
-        if (t.lit && cr() < 0.85) c = pick(P.shine);
-        else if (cr() < 0.05) c = pick(P.speck);                    // quelques éclats de couleur
+        if (V.fill === 'split') {
+          // Remplissage en deux tons, coupé par une ligne qui ondule (typique des pièces).
+          var line = Math.floor((t.cy - layout.top + layout.fs * 0.8) / layout.lineH);
+          var base = layout.top + clamp(line, 0, layout.lines - 1) * layout.lineH - layout.fs * 0.3;
+          var cut = base + Math.sin(t.cx / layout.fs * 4) * layout.fs * 0.07;
+          c = t.cy < cut ? P.fill[(r * P.fill.length) | 0] : P.fill2[(r * P.fill2.length) | 0];
+          if (t.lit) c = (dash++ % 3 === 2) ? P.line[0] : pick(P.shine); // tirets de lumière
+        } else {
+          var g = (t.cy - minY) / Math.max(1, maxY - minY);
+          c = P.fill[clamp(Math.floor((g * 0.8 + r * 0.45) * P.fill.length * 0.8), 0, P.fill.length - 1)];
+          if (t.lit && cr() < 0.85) c = pick(P.shine);
+          else if (cr() < 0.05) c = pick(P.speck);
+        }
       } else if (t.region === 'line') c = P.line[(r * P.line.length) | 0];
       else if (t.region === 'depth') c = P.depth[(r * P.depth.length) | 0];
       else if (t.region === 'outer') c = P.outer[(r * P.outer.length) | 0];
       else {
-        // Nuage de couleur autour de la pièce, qui se dissout dans le mur blanc.
         var n = (Math.sin(t.cx / W * 7 + a1) + Math.sin(t.cy / H * 5 + a2) + Math.sin((t.cx - t.cy) / (W + H) * 9 + a3)) / 3;
-        var reach = layout.fs * (0.55 + 0.35 * n);
-        var inCloud = t.distBg < reach - ROW * 2 * cr();
-        if (inCloud) {
+        var reach = layout.fs * (0.5 + 0.35 * n);
+        if (t.distBg < reach - ROW * 1.5 * cr()) {
           var m = (Math.sin(t.cx / W * 11 + a2) + Math.sin(t.cy / H * 9 + a3)) / 2 * 0.5 + 0.5;
           c = P.cloud[clamp(Math.floor((m + (cr() - .5) * 0.35) * P.cloud.length), 0, P.cloud.length - 1)];
         } else {
           c = STONE[(r * STONE.length) | 0];
-          if (cr() < 0.025) c = pick(P.cloud);
+          if (cr() < 0.03) c = pick(P.cloud);
         }
       }
       t.rgb = hex(c);
@@ -516,58 +605,63 @@
     });
   }
 
-  /* ---------- Animation : les tesselles tombent du spectateur vers le mur ---------- */
-  function plan() {
-    var minX = Infinity, maxX = -Infinity;
-    tiles.forEach(function (t) { if (t.region !== 'bg') { minX = Math.min(minX, t.cx); maxX = Math.max(maxX, t.cx); } });
-    var span = Math.max(1, maxX - minX), last = 0;
-    var order = { line: 0, outer: 0, depth: 120, fill: 260 };
+  /* ---------- Ordre et trajectoires : du centre vers les extrémités ---------- */
+  function plan(V) {
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    tiles.forEach(function (t) {
+      if (t.region === 'bg') return;
+      minX = Math.min(minX, t.cx); maxX = Math.max(maxX, t.cx); minY = Math.min(minY, t.cy); maxY = Math.max(maxY, t.cy);
+    });
+    var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, rx = Math.max(1, (maxX - minX) / 2), ry = Math.max(1, (maxY - minY) / 2);
+    layout.cx = cx; layout.cy = cy; layout.rx = rx; layout.ry = ry;
+    var spread = 1500, pieceEnd = 0, last = 0;
+    tiles.forEach(function (t) {
+      var dn = V.anim === 'tranchant'
+        ? Math.abs(t.cx - cx) / rx
+        : Math.min(1, Math.hypot((t.cx - cx) / rx, (t.cy - cy) / ry) / 1.15);
+      if (t.region !== 'bg') {
+        t.delay = 150 + dn * spread + t.r1 * 260 + (t.region === 'fill' ? 90 : 0);
+        t.dur = 470 + t.r2 * 170;
+        pieceEnd = Math.max(pieceEnd, t.delay + t.dur);
+      }
+      t.dn = dn;
+      t.lx = (t.r3 - 0.5) * ROW * 10;
+      t.ly = (t.r4 - 0.5) * ROW * 8 - ROW * 3;
+      t.rot0 = (t.r1 - 0.5) * (V.anim === 'tranchant' ? 7 : 2.2);
+      t.tilt0 = V.anim === 'tranchant' ? 0.3 + t.r2 * 0.4 : 0.5 + t.r2 * 0.75;
+      t.axis = t.r3 * Math.PI;
+      t.side = t.r4 < 0.5 ? -1 : 1;
+      t.placed = false; t.hit = false;
+    });
     tiles.forEach(function (t) {
       if (t.region === 'bg') {
-        t.delay = 2700 + Math.pow(t.distBg / layout.maxBg, 0.8) * 2000 + t.r1 * 700;
-        t.dur = 520 + t.r2 * 200;
-      } else {
-        var xn = (t.cx - minX) / span;
-        t.delay = 250 + order[t.region] + (xn * 0.6 + t.r1 * 0.4) * 2300;
-        t.dur = 720 + t.r2 * 260;
+        t.delay = pieceEnd * 0.72 + Math.pow(t.distBg / layout.maxBg, 0.85) * 1500 + t.r1 * 380;
+        t.dur = 360 + t.r2 * 140;
       }
-      // D'où vient la tesselle : légèrement décalée, tournée, vue de biais.
-      t.lx = (t.r3 - 0.5) * ROW * 14;
-      t.ly = (t.r4 - 0.5) * ROW * 10 - ROW * 4;
-      t.rot0 = (t.r1 - 0.5) * 2.4;
-      t.tilt0 = 0.5 + t.r2 * 0.75;
-      t.axis = t.r3 * Math.PI;
-      t.placed = false;
-      last = Math.max(last, t.delay + t.dur + 200);
+      last = Math.max(last, t.delay + t.dur + IMPACT);
     });
     layout.total = last;
+    layout.spread = spread;
   }
 
+  /* ---------- Rendu ---------- */
   function drawBedBase() {
     bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     bctx.fillStyle = GROUT;
     bctx.fillRect(0, 0, W, H);
-    // Grain du ciment.
     var gr = rng(9);
     for (var i = 0; i < W * H / 60; i++) {
       bctx.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.07)' : 'rgba(40,30,20,.07)';
       bctx.fillRect(gr() * W, gr() * H, 1 + gr() * 1.5, 1 + gr() * 1.5);
     }
-    // Le dessin préparatoire du mosaïste, au fusain, sur le ciment.
-    bctx.strokeStyle = 'rgba(40,32,28,.22)';
-    bctx.lineWidth = 1.4;
-    bctx.font = layout.fs + 'px ' + layout.font;
-    layout.drawGlyphs(bctx, 1, true);
   }
 
-  function tilePath(c, q) {
-    // Polygone aux coins légèrement arrondis, comme une tesselle taillée.
-    var r = ROW * 0.12;
+  function tilePath(c, q, row) {
+    var r = row * 0.08;
     c.beginPath();
     for (var i = 0; i < 4; i++) {
       var a = q[(i + 3) % 4], b = q[i], d = q[(i + 1) % 4];
-      var m1 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-      if (i === 0) c.moveTo(m1[0], m1[1]);
+      if (i === 0) c.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
       c.arcTo(b[0], b[1], (b[0] + d[0]) / 2, (b[1] + d[1]) / 2, r);
     }
     c.closePath();
@@ -575,9 +669,8 @@
 
   function placeOnBed(t) {
     var q = t.q, c = bctx;
-    // Petite ombre dans le joint, en bas à droite.
     c.fillStyle = 'rgba(50,40,30,.28)';
-    tilePath(c, q.map(function (p) { return [p[0] + 0.8, p[1] + 1.1]; }));
+    tilePath(c, q.map(function (p) { return [p[0] + 0.9, p[1] + 1.2]; }), t.row);
     c.fill();
     var minI = 0, maxI = 0;
     for (var i = 1; i < 4; i++) {
@@ -589,84 +682,139 @@
     g.addColorStop(0.55, css(t.rgb, t.tone));
     g.addColorStop(1, css(t.rgb, t.tone - 0.1));
     c.fillStyle = g;
-    tilePath(c, q);
+    tilePath(c, q, t.row);
     c.fill();
     c.strokeStyle = 'rgba(0,0,0,.12)';
     c.lineWidth = 0.6;
     c.stroke();
   }
 
-  function drawFlying(t, p, impact) {
-    // h : hauteur de la tesselle au-dessus du mur (1 = contre l'œil, 0 = posée).
-    var h = impact < 0 ? 1 - p * p : 0;
-    var persp = 1 / (1 - h * 0.78);                     // perspective : plus près = plus gros
-    var scale = persp * (impact >= 0 ? 1 - 0.07 * Math.sin(impact * Math.PI) : 1);
-    var cx = W / 2, cy = H / 2;
-    var px = t.cx + (t.cx - cx) * (persp - 1) * 0.28 + t.lx * h;
-    var py = t.cy + (t.cy - cy) * (persp - 1) * 0.28 + t.ly * h;
-    var rot = t.rot0 * h, tilt = Math.cos(t.tilt0 * h);
-    var ca = Math.cos(t.axis), sa = Math.sin(t.axis), cr = Math.cos(rot), sr = Math.sin(rot);
+  var IMPACT = 150;
+  function easeOutCubic(p) { return 1 - Math.pow(1 - p, 3); }
 
+  function drawFlying(t, p, impact, anim) {
+    var h, px, py, persp, rot, tilt;
+    if (impact >= 0) { p = 1; }
+    if (anim === 'eclat') {
+      // Lancée depuis le centre de l'écran (depuis vous), elle file vers sa place en arc.
+      var e = easeOutCubic(p);
+      h = impact >= 0 ? 0 : Math.pow(1 - p, 1.6);
+      persp = 1 / (1 - h * 0.8);
+      var sx = W / 2 + (t.r3 - 0.5) * ROW * 4, sy = H / 2 + (t.r4 - 0.5) * ROW * 3;
+      var dx = t.cx - sx, dy = t.cy - sy, dl = Math.hypot(dx, dy) || 1;
+      var arc = Math.sin(Math.PI * e) * Math.min(dl * 0.35, ROW * 9) * t.side;
+      px = sx + dx * e + (-dy / dl) * arc;
+      py = sy + dy * e + (dx / dl) * arc;
+      rot = t.rot0 * 2 * (1 - e);
+      tilt = Math.cos(t.tilt0 * 1.3 * (1 - e));
+    } else {
+      // Tombe de vous vers le mur : grosse et floue d'abord, puis se pose.
+      h = impact >= 0 ? 0 : 1 - p * p;
+      persp = 1 / (1 - h * 0.78);
+      px = t.cx + (t.cx - W / 2) * (persp - 1) * 0.28 + t.lx * h;
+      py = t.cy + (t.cy - H / 2) * (persp - 1) * 0.28 + t.ly * h;
+      rot = t.rot0 * h;
+      tilt = Math.cos(t.tilt0 * h);
+    }
+    var scale = persp * (impact >= 0 ? 1 - 0.07 * Math.sin(impact * Math.PI) : 1);
+    var ca = Math.cos(t.axis), sa = Math.sin(t.axis), cr = Math.cos(rot), sr = Math.sin(rot);
     function tf(pt, ox, oy, k) {
       var x = pt[0] - t.cx, y = pt[1] - t.cy;
-      var along = x * ca + y * sa, across = -x * sa + y * ca;
-      along *= tilt;                                    // basculement 3D autour de son axe
-      x = along * ca - across * sa; y = along * sa + across * ca;
-      x *= k; y *= k;
+      var along = (x * ca + y * sa) * tilt, across = -x * sa + y * ca;
+      x = (along * ca - across * sa) * k; y = (along * sa + across * ca) * k;
       return [ox + x * cr - y * sr, oy + x * sr + y * cr];
     }
-    // Ombre portée sur le mur : elle rejoint la tesselle à mesure qu'elle descend.
     if (h > 0.001) {
       ctx.globalAlpha = 0.07 + 0.3 * Math.pow(1 - h, 2);
       ctx.fillStyle = 'rgb(40,30,24)';
-      tilePath(ctx, t.q.map(function (pt) { return tf(pt, t.cx + h * ROW * 3, t.cy + h * ROW * 4.5, 1 + h * 0.8); }));
+      tilePath(ctx, t.q.map(function (pt) { return tf(pt, t.cx + h * ROW * 2.5, t.cy + h * ROW * 3.5, 1 + h * 0.7); }), t.row);
       ctx.fill();
     }
-    var alpha = Math.min(1, p * 4) * (0.45 + 0.55 * (1 - h));
+    var alpha = Math.min(1, p * 5) * (0.5 + 0.5 * (1 - h));
     ctx.globalAlpha = alpha;
     ctx.fillStyle = css(t.rgb, t.tone);
-    var q = t.q.map(function (pt) { return tf(pt, px, py, scale); });
-    tilePath(ctx, q);
+    tilePath(ctx, t.q.map(function (pt) { return tf(pt, px, py, scale); }), t.row);
     ctx.fill();
     var shade = (1 - Math.abs(tilt)) * 0.45;
     if (shade > 0.02) { ctx.globalAlpha = alpha * shade; ctx.fillStyle = '#000'; ctx.fill(); }
-    if (impact >= 0 && impact < 0.6) { ctx.globalAlpha = 0.35 * (1 - impact / 0.6); ctx.fillStyle = '#fff'; ctx.fill(); }
+    if (impact >= 0 && impact < 0.6) { ctx.globalAlpha = 0.4 * (1 - impact / 0.6); ctx.fillStyle = '#fff'; ctx.fill(); }
     ctx.globalAlpha = 1;
   }
 
-  var IMPACT = 170;
+  var shake = 0;
   function frame(now) {
+    var V = VARIANTS[variant];
     var time = now - t0;
     bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
     flying.length = 0;
+    var hits = 0;
     for (var i = 0; i < tiles.length; i++) {
       var t = tiles[i];
       if (t.placed) continue;
       var tau = time - t.delay;
       if (tau < 0) continue;
       if (tau > t.dur + IMPACT) { placeOnBed(t); t.placed = true; continue; }
+      if (tau > t.dur && !t.hit) { t.hit = true; if (t.region !== 'bg') hits++; }
       flying.push(t);
     }
+    // Version « Tranchant » : chaque vague d'impacts secoue légèrement le mur.
+    if (V.anim === 'tranchant') shake = Math.min(7, shake * 0.82 + hits * 0.09);
+    else shake = 0;
+    var ox = (Math.random() - 0.5) * shake, oy = (Math.random() - 0.5) * shake;
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(bed, 0, 0);
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = GROUT;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bed, ox * DPR, oy * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, ox * DPR, oy * DPR);
+
+    // Version « Lame » : une onde de lumière accompagne le front de pose.
+    if (V.anim === 'onde') {
+      var front = (time - 150 - 520) / layout.spread * 1.15;
+      if (front > 0 && front < 1.6) {
+        var a = 0.22 * (1 - front / 1.6);
+        ctx.save();
+        ctx.translate(layout.cx, layout.cy);
+        ctx.scale(layout.rx, layout.ry);
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.max(0.001, front), 0, Math.PI * 2);
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(255,255,255,' + a + ')';
+        ctx.lineWidth = ROW * 1.6;
+        ctx.stroke();
+      }
+    }
+
     if (flying.length) {
-      // Les plus hautes (les plus proches de l'œil) sont dessinées en dernier.
       flying.sort(function (a, b) { return (time - b.delay) / b.dur - (time - a.delay) / a.dur; });
       for (var j = 0; j < flying.length; j++) {
         var f = flying[j], tt = time - f.delay;
-        if (tt <= f.dur) drawFlying(f, tt / f.dur, -1);
-        else drawFlying(f, 1, (tt - f.dur) / IMPACT);
+        if (tt <= f.dur) drawFlying(f, tt / f.dur, -1, V.anim);
+        else drawFlying(f, 1, (tt - f.dur) / IMPACT, V.anim);
       }
     }
     if (time < layout.total + 300) requestAnimationFrame(frame);
-    else running = false;
+    else {
+      running = false;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(bed, 0, 0);
+    }
+  }
+
+  function load() {
+    var key = variant + ':' + window.innerWidth + 'x' + window.innerHeight;
+    if (!cache[key]) cache[key] = build();
+    var c = cache[key];
+    tiles = c.tiles; layout = c.layout; ROW = c.ROW; W = c.W; H = c.H;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = bed.width = Math.round(W * DPR);
+    canvas.height = bed.height = Math.round(H * DPR);
   }
 
   function play() {
+    load();
     drawBedBase();
-    tiles.forEach(function (t) { t.placed = false; });
+    tiles.forEach(function (t) { t.placed = false; t.hit = false; });
     if (reduceMotion) {
       tiles.forEach(function (t) { placeOnBed(t); t.placed = true; });
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -678,17 +826,22 @@
   }
 
   /* ---------- Commandes ---------- */
-  document.querySelectorAll('[data-pal]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      palName = b.getAttribute('data-pal');
-      document.querySelectorAll('[data-pal]').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-      paint();
-      play();
+  function choose(name) {
+    variant = name;
+    document.querySelectorAll('[data-variant]').forEach(function (x) {
+      x.setAttribute('aria-pressed', x.getAttribute('data-variant') === name ? 'true' : 'false');
     });
+    play();
+  }
+  document.querySelectorAll('[data-variant]').forEach(function (b) {
+    b.addEventListener('click', function () { choose(b.getAttribute('data-variant')); });
   });
   document.getElementById('rejouer').addEventListener('click', play);
   window.addEventListener('keydown', function (e) {
-    if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
+    if (e.key === '1') choose('lame');
+    else if (e.key === '2') choose('eclat');
+    else if (e.key === '3') choose('tranchant');
+    else if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
   });
   var resizeTimer, lastW = 0, lastH = 0;
   window.addEventListener('resize', function () {
@@ -696,16 +849,20 @@
     resizeTimer = setTimeout(function () {
       if (Math.abs(window.innerWidth - lastW) < 2 && Math.abs(window.innerHeight - lastH) < 60) return;
       lastW = window.innerWidth; lastH = window.innerHeight;
-      build(); play();
+      cache = {};
+      play();
     }, 250);
   });
 
-  function start() { lastW = window.innerWidth; lastH = window.innerHeight; build(); play(); }
   var started = false;
-  function go() { if (!started) { started = true; start(); } }
+  function go() { if (!started) { started = true; lastW = window.innerWidth; lastH = window.innerHeight; play(); } }
   if (document.fonts && document.fonts.load) {
-    document.fonts.load('100px "Knewave"').then(go, go);
-    setTimeout(go, 2000);
+    Promise.all([
+      document.fonts.load('100px "Shojumaru"'),
+      document.fonts.load('100px "Bangers"'),
+      document.fonts.load('italic 900 100px "Kanit"')
+    ]).then(go, go);
+    setTimeout(go, 2500);
   } else go();
 })();
 </script>
