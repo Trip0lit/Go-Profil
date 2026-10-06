@@ -342,7 +342,7 @@
         if (!occ[gy * gw + gx]) free++;
       }
     }
-    if (inside < total * minIn || free < total * 0.9) return false;
+    if (inside < total * minIn || free < total * 0.85) return false;
     var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
     q.forEach(function (p) { minx = Math.min(minx, p[0]); maxx = Math.max(maxx, p[0]); miny = Math.min(miny, p[1]); maxy = Math.max(maxy, p[1]); });
     for (var gy2 = Math.max(0, (miny / G) | 0); gy2 <= Math.min(gh - 1, (maxy / G) | 0); gy2++) {
@@ -364,7 +364,7 @@
   function layRows(mask, D, region, lenK) {
     var maxD = 0;
     for (var i = 0; i < D.length; i++) if (D[i] > maxD) maxD = D[i];
-    var gap = ROW * 0.17, half = ROW / 2 - gap / 2;
+    var gap = Math.max(1.2, ROW * 0.07), half = ROW / 2 - gap / 2;   // joint fin
     for (var level = ROW * 0.5; level < maxD; level += ROW) {
       var lines = contours(D, gw, gh, level);
       lines.forEach(function (line) {
@@ -394,11 +394,11 @@
           var sa = s + gap / 2, sb = e - gap / 2;
           if (sb - sa > ROW * 0.3) {
             var A = at(sa), B = at(sb), na = normal(sa), nb = normal(sb);
-            var ha = half * (0.9 + R() * 0.12), hb = half * (0.9 + R() * 0.12);
+            var ha = half * (0.97 + R() * 0.04), hb = half * (0.97 + R() * 0.04);
             var q = jitter([
               [A[0] + na[0] * ha, A[1] + na[1] * ha], [B[0] + nb[0] * hb, B[1] + nb[1] * hb],
               [B[0] - nb[0] * hb, B[1] - nb[1] * hb], [A[0] - na[0] * ha, A[1] - na[1] * ha]
-            ], ROW * 0.1);
+            ], ROW * 0.025);
             tryTile(q, mask, 0.7, region);
           }
           s = e;
@@ -417,12 +417,12 @@
         var dx = (D[k + 1] || 0) - (D[k - 1] || 0), dy = (D[k + gw] || 0) - (D[k - gw] || 0), l = Math.hypot(dx, dy) || 1;
         var tx = -dy / l, ty = dx / l, nx = dx / l, ny = dy / l;
         var cx = (gx + .5) * G, cy = (gy + .5) * G;
-        for (var size = 0.8; size >= 0.45; size -= 0.35) {
-          var a = ROW * size * (0.8 + R() * 0.4) / 2, b = ROW * size * 0.85 / 2;
+        for (var size = 1; size >= 0.4; size -= 0.3) {
+          var a = ROW * size * (0.8 + R() * 0.4) / 2, b = ROW * size * 0.95 / 2;
           var q = jitter([
             [cx - tx * a + nx * b, cy - ty * a + ny * b], [cx + tx * a + nx * b, cy + ty * a + ny * b],
             [cx + tx * a - nx * b, cy + ty * a - ny * b], [cx - tx * a - nx * b, cy - ty * a - ny * b]
-          ], ROW * 0.06);
+          ], ROW * 0.02);
           if (tryTile(q, mask, 0.55, region)) break;
         }
       }
@@ -452,6 +452,48 @@
     });
   }
 
+
+  /* ---------- Joints fins ----------
+     Après la pose en rangées, chaque case de la zone est rattachée à l'éclat le
+     plus proche (croissance depuis les éclats posés). Chaque éclat prend alors
+     la forme de toutes ses cases, moins un joint très fin : plus aucun trou. */
+  function tighten(mask, start) {
+    var N = gw * gh, id = new Int32Array(N).fill(-1), queue = new Int32Array(N), qh = 0, qt = 0, n, k;
+    for (n = start; n < pieces.length; n++) {
+      var q = pieces[n].q, bb = [Infinity, Infinity, -Infinity, -Infinity];
+      q.forEach(function (v) { bb[0] = Math.min(bb[0], v[0]); bb[1] = Math.min(bb[1], v[1]); bb[2] = Math.max(bb[2], v[0]); bb[3] = Math.max(bb[3], v[1]); });
+      for (var y = Math.max(0, (bb[1] / G) | 0); y <= Math.min(gh - 1, (bb[3] / G) | 0); y++)
+        for (var x = Math.max(0, (bb[0] / G) | 0); x <= Math.min(gw - 1, (bb[2] / G) | 0); x++) {
+          k = y * gw + x;
+          if (mask[k] && id[k] < 0 && inQuad(q, (x + .5) * G, (y + .5) * G)) { id[k] = n; queue[qt++] = k; }
+        }
+    }
+    while (qh < qt) {
+      k = queue[qh++];
+      var x2 = k % gw, nb = [x2 > 0 ? k - 1 : -1, x2 < gw - 1 ? k + 1 : -1, k - gw, k + gw];
+      for (var i = 0; i < 4; i++) {
+        var j = nb[i];
+        if (j < 0 || j >= N || !mask[j] || id[j] >= 0) continue;
+        id[j] = id[k]; queue[qt++] = j;
+      }
+    }
+    var pts = {};
+    for (k = 0; k < N; k++) if (id[k] >= 0) {
+      var X = (k % gw) * G, Y = ((k / gw) | 0) * G;
+      (pts[id[k]] || (pts[id[k]] = [])).push([X, Y], [X + G, Y], [X, Y + G], [X + G, Y + G]);
+    }
+    var joint = Math.max(0.7, ROW * 0.045);
+    for (n = start; n < pieces.length; n++) {
+      if (!pts[n]) { pieces[n].dead = true; continue; }
+      var h = hull(pts[n]);
+      if (h.length > 6) h = rdpLoop(h, G * 0.6);
+      if (h.length < 3) { pieces[n].dead = true; continue; }
+      var sh = shrink(h, joint);
+      pieces[n].q = sh;
+      pieces[n].c = centroid(sh);
+    }
+    for (n = pieces.length - 1; n >= start; n--) if (pieces[n].dead) pieces.splice(n, 1);
+  }
 
   /* ---------- Construction d'une version ---------- */
   function build(V) {
@@ -545,6 +587,7 @@
       ROW = Math.max(row, 4);
       layRows(mask, D, kind, lenK);
       fillGaps(mask, D, kind);
+      tighten(mask, start);
       for (var n = start; n < pieces.length; n++) {
         var p = pieces[n], gx = clamp((p.c[0] / G) | 0, 0, gw - 1), gy = clamp((p.c[1] / G) | 0, 0, gh - 1);
         p.ring = Math.floor((ringD || D)[gy * gw + gx] / ROW);
@@ -561,8 +604,10 @@
     else {
       // rangées horizontales : la fonction de distance donne directement les lignes
       ROW = ROWB;
+      var st0 = pieces.length;
       layRows(B, DB, 'bg', 1.05);
       fillGaps(B, edt(B, gw, gh), 'bg');
+      tighten(B, st0);
     }
 
     // Couleurs.
