@@ -1,0 +1,46 @@
+# ============================================================
+#  Catalogue de vos activités
+#  Pour ajouter une activité : copiez un bloc qui commence par
+#  "- titre:" et collez-le en dessous, puis modifiez-le.
+#  Attention : gardez bien les mêmes espaces en début de ligne.
+#
+#  titre       : nom de l'activité
+#  categorie   : sert aux boutons de filtre (ex : Sport, Création…)
+#  periode     : texte libre (ex : "2024", "Depuis 2019")
+#  image       : nom d'un fichier du dossier assets/images
+#  description : une ou deux phrases
+#  Astuce : mettez les textes entre guillemets "…" (obligatoire
+#  s'ils contiennent le signe « : »).
+#  lien        : (facultatif) une adresse web ou un article du blog
+# ============================================================
+
+- titre: Randonnée en montagne
+  categorie: Sport
+  periode: "Depuis 2018"
+  image: montagne.jpg
+  description: "Des sommets des Alpes aux crêtes des Pyrénées, je collectionne les levers de soleil en altitude."
+  lien: /blog/2026/10/01/article-exemple/
+
+- titre: Atelier création
+  categorie: Création
+  periode: "Depuis 2020"
+  image: atelier.jpg
+  description: "Peinture, collage et graphisme : un espace pour expérimenter les formes et les couleurs."
+
+- titre: Voyages
+  categorie: Voyage
+  periode: "2015 — aujourd'hui"
+  image: desert.jpg
+  description: "Carnets de route, rencontres et paysages à l'autre bout du monde."
+
+- titre: Photographie de nature
+  categorie: Création
+  periode: "Depuis 2016"
+  image: foret.jpg
+  description: "Forêts, lumières rasantes et petits détails qu'on ne voit qu'en prenant le temps."
+
+- titre: Voile & océan
+  categorie: Sport
+  periode: "Chaque été"
+  image: ocean.jpg
+  description: "Navigation côtière, couchers de soleil sur l'eau et l'apprentissage de la patience."

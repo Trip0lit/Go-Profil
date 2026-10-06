@@ -1,0 +1,12 @@
+<footer class="site-footer" id="contact">
+  <div class="container">
+    <p class="eyebrow">Contact</p>
+    <h2 class="footer__title" data-mosaic>Écrivons <em>la suite</em> ensemble</h2>
+    <ul class="footer__liens">
+      {%- for lien in site.data.profil.liens %}
+      <li><a href="{{ lien.url }}"{% unless lien.url contains 'mailto:' %} target="_blank" rel="noopener"{% endunless %}>{{ lien.nom }} <span aria-hidden="true">↗</span></a></li>
+      {%- endfor %}
+    </ul>
+    <p class="footer__bas">© {{ 'now' | date: '%Y' }} {{ site.data.profil.nom }} · <a href="{{ '/blog/feed.xml' | relative_url }}">Flux RSS</a></p>
+  </div>
+</footer>

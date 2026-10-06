@@ -1,0 +1,16 @@
+---
+layout: page
+title: Blog
+titre_html: Le <em>journal</em>
+sur_titre: Blog
+intro: Récits, projets et photos, du plus récent au plus ancien.
+---
+{%- if site.posts.size > 0 %}
+<div class="articles articles--liste">
+  {%- for post in site.posts %}
+  {% include carte-article.html post=post %}
+  {%- endfor %}
+</div>
+{%- else %}
+<p class="lead">Aucun article pour le moment.</p>
+{%- endif %}

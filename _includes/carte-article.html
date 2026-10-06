@@ -1,0 +1,14 @@
+{%- assign post = include.post -%}
+<article class="carte-article reveal">
+  <a href="{{ post.url | relative_url }}">
+    {%- if post.image %}
+    <div class="carte-article__image mosaic-img"><img src="{% include image-url.html src=post.image %}" alt="" loading="lazy"></div>
+    {%- endif %}
+    <div class="carte-article__texte">
+      <time datetime="{{ post.date | date_to_xmlschema }}">{% include date-fr.html date=post.date %}</time>
+      <h3>{{ post.title }}</h3>
+      <p>{{ post.resume | default: post.excerpt | strip_html | truncate: 180 }}</p>
+      <span class="lien-fleche">Lire l'article <span aria-hidden="true">→</span></span>
+    </div>
+  </a>
+</article>
