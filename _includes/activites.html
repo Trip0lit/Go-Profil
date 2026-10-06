@@ -1,0 +1,31 @@
+{%- comment -%} Grille des activités, avec boutons de filtre par catégorie. {%- endcomment -%}
+{%- assign _activites = site.data.activites -%}
+{%- if include.limite %}{% assign _activites = _activites | slice: 0, include.limite %}{% endif -%}
+{%- assign _categories = _activites | map: 'categorie' | uniq -%}
+<div class="activites" data-filtres>
+  {%- if include.filtres and _categories.size > 1 %}
+  <div class="filtres" role="group" aria-label="Filtrer par catégorie">
+    <button type="button" class="filtre" data-filtre="*" aria-pressed="true">Tout</button>
+    {%- for c in _categories %}
+    <button type="button" class="filtre" data-filtre="{{ c | slugify }}" aria-pressed="false">{{ c }}</button>
+    {%- endfor %}
+  </div>
+  {%- endif %}
+  <div class="activites__grille">
+    {%- for a in _activites %}
+    <article class="activite reveal" data-categorie="{{ a.categorie | slugify }}">
+      {%- if a.image %}
+      <div class="activite__image mosaic-img"><img src="{% include image-url.html src=a.image %}" alt="" loading="lazy"></div>
+      {%- endif %}
+      <div class="activite__texte">
+        <p class="activite__meta"><span>{{ a.categorie }}</span>{% if a.periode %}<span>{{ a.periode }}</span>{% endif %}</p>
+        <h3>{{ a.titre }}</h3>
+        <p>{{ a.description }}</p>
+        {%- if a.lien %}
+        <a class="lien-fleche" href="{% if a.lien contains '://' %}{{ a.lien }}{% else %}{{ a.lien | relative_url }}{% endif %}">En savoir plus <span aria-hidden="true">→</span></a>
+        {%- endif %}
+      </div>
+    </article>
+    {%- endfor %}
+  </div>
+</div>

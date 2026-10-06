@@ -1,0 +1,11 @@
+{%- comment -%}
+  Insère une photo dans un article.
+  {% include photo.html src="montagne.jpg" legende="Mon texte" %}
+  Options : alt="description", taille="large" (pleine largeur) ou "petite"
+{%- endcomment -%}
+<figure class="photo photo--{{ include.taille | default: 'normale' }}">
+  <div class="mosaic-img"><img src="{% include image-url.html src=include.src %}" alt="{{ include.alt | default: include.legende | default: '' | escape }}" loading="lazy"></div>
+  {%- if include.legende %}
+  <figcaption>{{ include.legende }}</figcaption>
+  {%- endif %}
+</figure>

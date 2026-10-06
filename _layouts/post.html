@@ -1,0 +1,32 @@
+---
+layout: default
+---
+<article class="article">
+  <header class="article__entete container">
+    <p class="badge"><time datetime="{{ page.date | date_to_xmlschema }}">{% include date-fr.html date=page.date %}</time>{% if page.tags.size > 0 %} · {{ page.tags | join: ' · ' }}{% endif %}</p>
+    <h1 class="titre-xl" data-mosaic>{{ page.title }}</h1>
+    {%- if page.resume %}<p class="lead">{{ page.resume }}</p>{% endif %}
+  </header>
+
+  {%- if page.image %}
+  <div class="article__couverture">
+    <div class="cadre">
+      <div class="mosaic-img"><img src="{% include image-url.html src=page.image %}" alt="{{ page.image_alt | default: page.title | escape }}"></div>
+    </div>
+  </div>
+  {%- endif %}
+
+  <div class="prose container container--etroit">
+    {{ content }}
+  </div>
+
+  <nav class="article__nav container container--etroit" aria-label="Autres articles">
+    {%- if page.previous %}
+    <a href="{{ page.previous.url | relative_url }}"><span>← Article précédent</span>{{ page.previous.title }}</a>
+    {%- else %}<span></span>{% endif %}
+    {%- if page.next %}
+    <a class="suivant" href="{{ page.next.url | relative_url }}"><span>Article suivant →</span>{{ page.next.title }}</a>
+    {%- endif %}
+  </nav>
+  <p class="container container--etroit"><a class="lien-fleche" href="{{ '/blog/' | relative_url }}"><span aria-hidden="true">←</span> Tous les articles</a></p>
+</article>

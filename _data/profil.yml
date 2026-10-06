@@ -1,0 +1,42 @@
+# ============================================================
+#  Votre profil : modifiez librement les textes ci-dessous.
+#  Les images se mettent dans le dossier assets/images
+#  et s'indiquent ici par leur nom (ex : portrait.jpg).
+# ============================================================
+
+nom: Votre Nom
+# Petit texte au-dessus du grand titre
+sur_titre: Bonjour, je suis
+# Phrase d'accroche sous le titre
+accroche: "Créateur, explorateur et curieux. Je partage ici mes projets, mes voyages et tout ce qui m'anime."
+# Grande image affichée sous le titre de la page d'accueil
+image_accueil: foret.jpg
+
+a_propos:
+  titre: Qui suis-je ?
+  texte: |
+    Ici, présentez-vous en quelques phrases : votre parcours, ce qui vous passionne,
+    ce que vous cherchez à construire.
+
+    Vous pouvez écrire plusieurs paragraphes en laissant une ligne vide entre eux,
+    et même utiliser le **gras** ou l'*italique*.
+
+# Quelques chiffres affichés sous la présentation (facultatif)
+chiffres:
+  - valeur: "12"
+    libelle: projets menés
+  - valeur: "8"
+    libelle: pays visités
+  - valeur: "∞"
+    libelle: idées en cours
+
+# Liens affichés en bas de page (supprimez ceux dont vous n'avez pas besoin)
+liens:
+  - nom: E-mail
+    url: mailto:vous@exemple.com
+  - nom: GitHub
+    url: https://github.com/trip0lit
+  - nom: LinkedIn
+    url: https://www.linkedin.com/
+  - nom: Instagram
+    url: https://www.instagram.com/

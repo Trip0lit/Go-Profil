@@ -1,0 +1,88 @@
+---
+layout: default
+---
+{%- assign p = site.data.profil -%}
+<section class="hero container">
+  {%- if p.sur_titre %}<p class="badge">{{ p.sur_titre }}</p>{% endif %}
+  <h1 class="hero__titre">
+    <span class="hero__paren" aria-hidden="true">(</span>
+    <span class="hero__texte" data-mosaic>{{ p.nom }}</span>
+    <span class="hero__paren" aria-hidden="true">)</span>
+  </h1>
+  <p class="lead">{{ p.accroche }}</p>
+  <div class="hero__actions">
+    <a class="btn" href="{{ '/activites/' | relative_url }}">Découvrir mes activités</a>
+    <a class="btn btn--clair" href="{{ '/blog/' | relative_url }}">Lire le blog</a>
+  </div>
+</section>
+
+{%- if p.image_accueil %}
+<section class="vitrine">
+  <div class="cadre cadre--fenetre">
+    <div class="cadre__barre" aria-hidden="true"><i></i><i></i><i></i><span>{{ p.nom }}</span></div>
+    <div class="mosaic-img"><img src="{% include image-url.html src=p.image_accueil %}" alt=""></div>
+  </div>
+</section>
+{%- endif %}
+
+<section class="section container" id="a-propos">
+  <div class="apropos">
+    <div class="apropos__texte reveal">
+      <p class="eyebrow">À propos</p>
+      <h2 class="titre-l" data-mosaic>{{ p.a_propos.titre }}</h2>
+      <div class="prose">{{ p.a_propos.texte | markdownify }}</div>
+      {%- if p.chiffres %}
+      <dl class="chiffres">
+        {%- for c in p.chiffres %}
+        <div><dt>{{ c.libelle }}</dt><dd>{{ c.valeur }}</dd></div>
+        {%- endfor %}
+      </dl>
+      {%- endif %}
+    </div>
+  </div>
+</section>
+
+{%- assign _vedettes = site.data.activites | slice: 0, 4 -%}
+<section class="section container">
+  <p class="eyebrow">Ce qui m'occupe</p>
+  <h2 class="titre-l" data-mosaic>Mes activités, <em>pièce par pièce</em></h2>
+  <div class="etapes" data-etapes>
+    <ol class="etapes__liste">
+      {%- for a in _vedettes %}
+      <li>
+        <button type="button" class="etape{% if forloop.first %} est-active{% endif %}" data-etape="{{ forloop.index0 }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}">
+          <span class="etape__num">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
+          <span class="etape__titre">{{ a.titre }}</span>
+        </button>
+        <div class="etape__detail"><div>
+          <p>{{ a.description }}</p>
+          <p class="activite__meta"><span>{{ a.categorie }}</span>{% if a.periode %}<span>{{ a.periode }}</span>{% endif %}</p>
+        </div></div>
+      </li>
+      {%- endfor %}
+    </ol>
+    <div class="etapes__visuel cadre">
+      {%- for a in _vedettes %}
+      <div class="mosaic-img{% if forloop.first %} est-active{% endif %}" data-visuel="{{ forloop.index0 }}"{% unless forloop.first %} data-mosaic-manuel{% endunless %}><img src="{% include image-url.html src=a.image %}" alt="{{ a.titre | escape }}" loading="lazy"></div>
+      {%- endfor %}
+    </div>
+  </div>
+  <p class="centre"><a class="btn" href="{{ '/activites/' | relative_url }}">Voir tout le catalogue</a></p>
+</section>
+
+{%- if site.posts.size > 0 %}
+<section class="section container">
+  <div class="section__entete">
+    <div>
+      <p class="eyebrow">Journal</p>
+      <h2 class="titre-l" data-mosaic>Derniers <em>articles</em></h2>
+    </div>
+    <a class="lien-fleche" href="{{ '/blog/' | relative_url }}">Tous les articles <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="articles">
+    {%- for post in site.posts limit: 3 %}
+    {% include carte-article.html post=post %}
+    {%- endfor %}
+  </div>
+</section>
+{%- endif %}

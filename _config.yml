@@ -1,0 +1,37 @@
+# ============================================================
+#  Réglages généraux du site
+#  (après une modification de ce fichier, GitHub reconstruit
+#   le site automatiquement en 1 à 2 minutes)
+# ============================================================
+
+title: Go-Profil
+description: Un profil décrivant qui je suis et mes activités.
+lang: fr
+
+# Adresse du site.
+#  - Si le dépôt s'appelle "Go-Profil", le site sera à
+#    https://<votre-pseudo>.github.io/Go-Profil  → baseurl: "/Go-Profil"
+#  - Si le dépôt s'appelle "<votre-pseudo>.github.io" → baseurl: ""
+url: ""
+baseurl: "/Go-Profil"
+
+# Adresse des articles : /blog/2026/10/06/mon-article/
+permalink: /blog/:year/:month/:day/:title/
+
+timezone: Europe/Paris
+markdown: kramdown
+kramdown:
+  input: GFM
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+feed:
+  path: blog/feed.xml
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor

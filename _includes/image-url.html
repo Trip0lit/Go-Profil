@@ -1,0 +1,14 @@
+{%- comment -%}
+  Transforme un nom d'image en adresse complète.
+  "montagne.jpg"              → /assets/images/montagne.jpg
+  "/assets/autre/photo.jpg"   → inchangé (avec le baseurl)
+  "https://…"                 → inchangé
+{%- endcomment -%}
+{%- assign _src = include.src | strip -%}
+{%- if _src contains '://' -%}
+{{ _src }}
+{%- elsif _src contains '/' -%}
+{{ _src | relative_url }}
+{%- else -%}
+{{ '/assets/images/' | append: _src | relative_url }}
+{%- endif -%}

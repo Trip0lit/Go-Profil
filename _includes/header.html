@@ -1,0 +1,14 @@
+<header class="site-header">
+  <nav class="nav">
+    <a class="nav__logo" href="{{ '/' | relative_url }}">
+      <span class="nav__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      {{ site.data.profil.nom | default: site.title }}
+    </a>
+    <div class="nav__links">
+      <a href="{{ '/#a-propos' | relative_url }}">À propos</a>
+      <a href="{{ '/activites/' | relative_url }}"{% if page.url == '/activites/' %} aria-current="page"{% endif %}>Activités</a>
+      <a href="{{ '/blog/' | relative_url }}"{% if page.url contains '/blog/' %} aria-current="page"{% endif %}>Blog</a>
+    </div>
+    <a class="btn btn--small" href="#contact">Contact</a>
+  </nav>
+</header>

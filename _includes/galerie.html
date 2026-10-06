@@ -1,0 +1,15 @@
+{%- comment -%}
+  Insère plusieurs photos côte à côte.
+  {% include galerie.html images="foret.jpg, ocean.jpg, desert.jpg" legende="Mon texte" %}
+{%- endcomment -%}
+{%- assign _images = include.images | split: ',' -%}
+<figure class="galerie galerie--{{ _images.size }}">
+  <div class="galerie__grille">
+    {%- for _img in _images %}
+    <div class="mosaic-img"><img src="{% include image-url.html src=_img %}" alt="{{ include.legende | default: '' | escape }}" loading="lazy"></div>
+    {%- endfor %}
+  </div>
+  {%- if include.legende %}
+  <figcaption>{{ include.legende }}</figcaption>
+  {%- endif %}
+</figure>
