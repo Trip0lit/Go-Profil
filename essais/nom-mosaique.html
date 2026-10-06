@@ -1,0 +1,496 @@
+<title>Galvez Martin en mosaïque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Une seule scène : le nom en tesselles sur un fond de joint, commandes discrètes en bas. */
+  :root {
+    --grout: #ecebe6;       /* joint / enduit */
+    --grout-deep: #dedcd4;
+    --ink: #1d1c22;
+    --ink-soft: #6b6973;
+    --chip: #ffffff;
+    --chip-line: #d3d1c8;
+    --shadow: 20, 18, 30;   /* r,g,b de l'ombre des tesselles */
+    --display: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --grout: #16161b; --grout-deep: #0f0f13; --ink: #f1efe9; --ink-soft: #9a98a3;
+      --chip: #22222a; --chip-line: #33333d; --shadow: 0, 0, 0; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --grout: #16161b; --grout-deep: #0f0f13; --ink: #f1efe9; --ink-soft: #9a98a3;
+    --chip: #22222a; --chip-line: #33333d; --shadow: 0, 0, 0; color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(120% 90% at 50% 40%, var(--grout) 40%, var(--grout-deep) 100%);
+    background-color: var(--grout);
+    color: var(--ink);
+    font-family: var(--ui);
+    display: grid;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+  }
+  .scene { position: relative; min-height: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: center;
+    padding-block: 14px 22px; padding-inline: 16px;
+  }
+  .seg {
+    display: inline-flex; padding: 4px; gap: 2px; border-radius: 12px;
+    background: var(--chip); border: 1px solid var(--chip-line);
+  }
+  .seg button, .btn {
+    font: 600 14px/1 var(--ui); color: var(--ink); cursor: pointer;
+    border: 0; background: transparent; padding: 10px 14px; border-radius: 9px;
+    display: inline-flex; gap: 8px; align-items: center;
+  }
+  .seg button span { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-weight: 400; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--grout); }
+  .seg button[aria-pressed="true"] span { color: inherit; opacity: .6; }
+  .btn { background: var(--chip); border: 1px solid var(--chip-line); padding: 12px 16px; }
+  .btn:hover, .seg button:hover:not([aria-pressed="true"]) { background: var(--grout-deep); }
+  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .hint { width: 100%; text-align: center; margin: 0; font-size: 13px; color: var(--ink-soft); }
+  kbd { font: inherit; border: 1px solid var(--chip-line); border-radius: 4px; padding: 0 5px; }
+</style>
+
+<div class="scene"><canvas id="mosaic" aria-label="Galvez Martin" role="img"></canvas></div>
+
+<div class="controls">
+  <div class="seg" role="group" aria-label="Choix de l'animation">
+    <button type="button" id="mode-chute" data-mode="chute" aria-pressed="true"><span>1</span>Chute</button>
+    <button type="button" id="mode-tourbillon" data-mode="tourbillon" aria-pressed="false"><span>2</span>Tourbillon</button>
+    <button type="button" id="mode-pose" data-mode="pose" aria-pressed="false"><span>3</span>Pose</button>
+  </div>
+  <button type="button" class="btn" id="replay">↻ Rejouer</button>
+  <p class="hint">Touches <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> pour changer, <kbd>espace</kbd> pour rejouer. Passez la souris sur les lettres.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var NAME = 'GALVEZ MARTIN';
+  // Tesselles : émaux vifs, comme des smalti.
+  var PALETTE = ['#e23d2e', '#f2711c', '#f6b417', '#8cc63e', '#1fa463', '#13a3a6', '#2468d8', '#4b3fc4', '#9b3bbf', '#d93a83'];
+
+  var canvas = document.getElementById('mosaic');
+  var ctx = canvas.getContext('2d');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var W = 0, H = 0, DPR = 1, S = 10;
+  var tiles = [];
+  var mode = 'chute';
+  var t0 = 0, totalDuration = 0;
+  var pointer = { x: -9999, y: -9999, active: false };
+  var shadowRGB = '20,18,30';
+
+  /* ---------- Outils ---------- */
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function easeOutCubic(p) { return 1 - Math.pow(1 - p, 3); }
+  function easeInOutSine(p) { return -(Math.cos(Math.PI * p) - 1) / 2; }
+  // Ressort amorti : arrive à 1 en dépassant légèrement.
+  function spring(p) { return 1 - Math.exp(-6.5 * p) * Math.cos(9 * p); }
+
+  // Petit générateur pseudo-aléatoire reproductible (même mosaïque à chaque rejeu).
+  function rng(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function hexToRgb(h) {
+    var n = parseInt(h.slice(1), 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  function mix(a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+  function rgb(c, k) {
+    k = k || 0; // k > 0 éclaircit, k < 0 assombrit
+    var t = k > 0 ? [255, 255, 255] : [0, 0, 0];
+    var m = mix(c, t, Math.abs(k));
+    return 'rgb(' + (m[0] | 0) + ',' + (m[1] | 0) + ',' + (m[2] | 0) + ')';
+  }
+  var PAL = PALETTE.map(hexToRgb);
+
+  /* ---------- Construction de la mosaïque ---------- */
+  function layoutText(measureCtx) {
+    var font = function (size) { return size + 'px ' + getComputedStyle(document.documentElement).getPropertyValue('--display'); };
+    measureCtx.font = font(100);
+    var full = measureCtx.measureText(NAME).width;
+    var words = NAME.split(' ');
+    var widest = Math.max.apply(null, words.map(function (w) { return measureCtx.measureText(w).width; }));
+
+    // Le nom est empilé sur deux lignes : les lettres sont plus grandes, donc plus lisibles en tesselles.
+    var size = Math.min((W * 0.86) / widest * 100, H * 0.34);
+    if (words.length > 1) return { lines: words, size: size, font: font(size) };
+    var one = Math.min((W * 0.86) / full * 100, H * 0.5);
+    return { lines: [NAME], size: one, font: font(one) };
+  }
+
+  function build() {
+    var rect = canvas.getBoundingClientRect();
+    W = Math.max(1, rect.width); H = Math.max(1, rect.height);
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    shadowRGB = getComputedStyle(document.documentElement).getPropertyValue('--shadow').trim() || shadowRGB;
+
+    var off = document.createElement('canvas');
+    off.width = Math.ceil(W); off.height = Math.ceil(H);
+    var o = off.getContext('2d', { willReadFrequently: true });
+    var L = layoutText(o);
+    o.font = L.font;
+    o.textAlign = 'center';
+    o.textBaseline = 'alphabetic';
+    o.fillStyle = '#000';
+
+    var lineH = L.size * 0.92;
+    var m = o.measureText('H');
+    var capH = m.actualBoundingBoxAscent || L.size * 0.72;
+    var blockH = capH + lineH * (L.lines.length - 1);
+    var baseY = H / 2 - blockH / 2 + capH;
+    L.lines.forEach(function (line, i) { o.fillText(line, W / 2, baseY + i * lineH); });
+
+    // Taille d'une tesselle : environ un douzième de la hauteur des lettres.
+    S = clamp(capH / 12, 6, 22);
+    var data = o.getImageData(0, 0, off.width, off.height).data;
+    function ink(x, y) {
+      x = x | 0; y = y | 0;
+      if (x < 0 || y < 0 || x >= off.width || y >= off.height) return 0;
+      return data[(y * off.width + x) * 4 + 3] > 120 ? 1 : 0;
+    }
+
+    var rand = rng(7);
+    var a1 = rand() * 6, a2 = rand() * 6, a3 = rand() * 6;
+    tiles = [];
+    var cols = Math.ceil(W / S), rows = Math.ceil(H / S);
+    var ox = (W - cols * S) / 2, oy = (H - rows * S) / 2;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var x0 = ox + c * S, y0 = oy + r * S;
+        var hits = ink(x0 + S * .25, y0 + S * .25) + ink(x0 + S * .75, y0 + S * .25) +
+                   ink(x0 + S * .25, y0 + S * .75) + ink(x0 + S * .75, y0 + S * .75) + ink(x0 + S * .5, y0 + S * .5);
+        if (hits < 3) continue;
+
+        var cx = x0 + S / 2, cy = y0 + S / 2;
+        // Couleur : un champ de couleurs qui ondule à travers les lettres, + un peu de hasard.
+        var n = (Math.sin(cx / W * 5.2 + a1) + Math.sin(cy / H * 3.1 + a2) + Math.sin((cx + cy) / (W + H) * 7 + a3)) / 3;
+        var idx = clamp((n * 0.5 + 0.5) * PAL.length + (rand() - 0.5) * 2.2, 0, PAL.length - 0.001);
+        var base = PAL[idx | 0];
+        var shade = (rand() - 0.5) * 0.22;
+
+        // Carré légèrement irrégulier : chaque coin bouge un peu.
+        var h = 0.43, j = 0.075;
+        var corners = [
+          [-h + (rand() - .5) * j * 2, -h + (rand() - .5) * j * 2],
+          [ h + (rand() - .5) * j * 2, -h + (rand() - .5) * j * 2],
+          [ h + (rand() - .5) * j * 2,  h + (rand() - .5) * j * 2],
+          [-h + (rand() - .5) * j * 2,  h + (rand() - .5) * j * 2]
+        ];
+
+        tiles.push({
+          x: cx, y: cy, rot: (rand() - 0.5) * 0.12, corners: corners,
+          fill: rgb(base, shade), facet: rgb(base, shade + 0.28), edge: rgb(base, shade - 0.25),
+          r1: rand(), r2: rand(), r3: rand(), r4: rand(),
+          hx: 0, hy: 0, hl: 0,
+          row: r, col: c
+        });
+      }
+    }
+    planTimings();
+  }
+
+  /* ---------- Les 3 animations ---------- */
+  // Chaque fonction renvoie l'état d'une tesselle au temps t (ms) :
+  // position, rotation, échelle, opacité, « hauteur » (pour l'ombre) et éclat.
+
+  var MODES = {
+    // 1. Chute : les tesselles tombent avec la gravité, rebondissent et se calent.
+    //    La mosaïque se monte de bas en haut, comme un mur.
+    chute: {
+      plan: function () {
+        var maxRow = 0, minRow = 1e9;
+        tiles.forEach(function (t) { maxRow = Math.max(maxRow, t.row); minRow = Math.min(minRow, t.row); });
+        var span = Math.max(1, maxRow - minRow);
+        var g = 2 * H / (620 * 620); // px / ms²
+        var end = 0;
+        tiles.forEach(function (t) {
+          var k = (maxRow - t.row) / span;
+          t.delay = k * 1500 + t.r1 * 380 + Math.sin(t.col * 0.45) * 90 + 90;
+          t.startY = -S * 2 - t.r2 * H * 0.35;
+          t.fall = Math.sqrt(2 * (t.y - t.startY) / g);
+          t.g = g;
+          t.spin = (t.r3 - 0.5) * 4;
+          t.drift = (t.r4 - 0.5) * S * 3;
+          t.end = t.delay + t.fall + 420;
+          end = Math.max(end, t.end);
+        });
+        return end;
+      },
+      at: function (t, time, o) {
+        var tau = time - t.delay;
+        if (tau <= 0) { o.alpha = 0; return; }
+        o.alpha = 1;
+        if (tau < t.fall) {
+          var p = tau / t.fall;
+          o.x = t.x + t.drift * (1 - p);
+          o.y = t.startY + 0.5 * t.g * tau * tau;
+          o.rot = t.rot + t.spin * (1 - p);
+          o.lift = 1 - p * 0.7;
+          return;
+        }
+        var u = clamp((tau - t.fall) / 420, 0, 1);
+        var damp = Math.exp(-5 * u);
+        o.x = t.x;
+        o.y = t.y - S * 0.55 * damp * Math.abs(Math.sin(u * Math.PI * 2.4));
+        o.rot = t.rot + 0.25 * (t.r3 - 0.5) * damp * Math.cos(u * 14);
+        o.scale = 1 + 0.08 * damp * Math.sin(u * 20); // petit écrasement à l'impact
+        o.lift = 0.25 * damp;
+        o.glow = 0.35 * Math.exp(-9 * u);
+      }
+    },
+
+    // 2. Tourbillon : un nuage de tesselles tourne autour du nom et s'y aspire en spirale.
+    tourbillon: {
+      plan: function () {
+        var cx = W / 2, cy = H / 2, maxR = 0, end = 0;
+        tiles.forEach(function (t) {
+          t.tr = Math.hypot(t.x - cx, t.y - cy);
+          t.ta = Math.atan2(t.y - cy, t.x - cx);
+          maxR = Math.max(maxR, t.tr);
+        });
+        var far = Math.hypot(W, H) * 0.5;
+        tiles.forEach(function (t) {
+          t.delay = (t.tr / maxR) * 650 + t.r1 * 520;
+          t.dur = 1500 + t.r2 * 500;
+          t.sr = far * (0.65 + t.r3 * 0.7);
+          t.sa = t.ta - (Math.PI * 1.3 + t.r4 * Math.PI);
+          t.spin = (t.r1 - 0.5) * 12;
+          t.end = t.delay + t.dur;
+          end = Math.max(end, t.end);
+        });
+        return end;
+      },
+      at: function (t, time, o) {
+        var p = (time - t.delay) / t.dur;
+        if (p <= 0) { o.alpha = 0; return; }
+        p = Math.min(p, 1);
+        var e = easeOutCubic(p);
+        var r = t.sr + (t.tr - t.sr) * spring(p);
+        var a = t.sa + (t.ta - t.sa) * e;
+        o.x = W / 2 + Math.cos(a) * r;
+        o.y = H / 2 + Math.sin(a) * r;
+        o.rot = t.rot + t.spin * (1 - e);
+        o.scale = 0.35 + 0.65 * easeOutCubic(Math.min(1, p * 1.4));
+        o.alpha = Math.min(1, p * 5);
+        o.lift = (1 - e) * 1.2;
+        o.glow = p > 0.8 ? 0.3 * Math.sin((p - 0.8) / 0.2 * Math.PI) : 0;
+      }
+    },
+
+    // 3. Pose : comme un mosaïste, chaque tesselle descend vers le mur,
+    //    se presse dans le joint, et la vague avance de gauche à droite.
+    pose: {
+      plan: function () {
+        var end = 0;
+        var minX = 1e9, maxX = -1e9;
+        tiles.forEach(function (t) { minX = Math.min(minX, t.x); maxX = Math.max(maxX, t.x); });
+        var span = Math.max(1, maxX - minX);
+        tiles.forEach(function (t) {
+          var k = (t.x - minX) / span;
+          t.delay = k * 2200 + (t.y / H) * 420 + t.r1 * 260;
+          t.dur = 640;
+          t.spin = (t.r2 - 0.5) * 1.2;
+          t.end = t.delay + t.dur + 250;
+          end = Math.max(end, t.end);
+        });
+        return end;
+      },
+      at: function (t, time, o) {
+        var tau = time - t.delay;
+        if (tau <= 0) { o.alpha = 0; return; }
+        var p = Math.min(1, tau / t.dur);
+        var e = easeOutCubic(p);
+        o.alpha = Math.min(1, p * 2.2);
+        o.scale = 1 + 1.1 * Math.pow(1 - p, 3) - 0.07 * Math.sin(clamp((p - 0.55) / 0.45, 0, 1) * Math.PI);
+        o.x = t.x - (1 - e) * S * 0.8;
+        o.y = t.y - (1 - e) * S * 2.2;
+        o.rot = t.rot + t.spin * (1 - e);
+        o.lift = (1 - e) * 1.6;
+        var after = (tau - t.dur) / 250;
+        o.glow = p < 1 ? 0.45 * Math.pow(p, 4) : 0.45 * Math.max(0, 1 - after);
+      }
+    }
+  };
+
+  function planTimings() {
+    totalDuration = MODES[mode].plan();
+  }
+
+  function play(newMode) {
+    if (newMode) mode = newMode;
+    planTimings();
+    t0 = performance.now() - (reduceMotion ? totalDuration + 1000 : 0);
+    document.querySelectorAll('[data-mode]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-mode') === mode ? 'true' : 'false');
+    });
+  }
+
+  /* ---------- Rendu ---------- */
+  var st = {};
+  function frame(now) {
+    var time = now - t0;
+    var settled = time > totalDuration;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    // Lueur qui balaie le nom en diagonale toutes les ~6 s, une fois posé.
+    var sweep = settled ? ((time - totalDuration) % 6000) / 6000 : -1;
+    var sweepPos = -0.2 + sweep * 2.2;
+    var R = S * 4;
+
+    for (var pass = 0; pass < 2; pass++) {
+      for (var i = 0; i < tiles.length; i++) {
+        var t = tiles[i];
+        st.x = t.x; st.y = t.y; st.rot = t.rot; st.scale = 1; st.alpha = 1; st.lift = 0; st.glow = 0;
+        if (!settled) MODES[mode].at(t, time, st);
+        if (st.alpha <= 0) continue;
+
+        // Survol : les tesselles proches se soulèvent et s'écartent.
+        var tx = 0, ty = 0, tl = 0;
+        if (settled && pointer.active) {
+          var dx = t.x - pointer.x, dy = t.y - pointer.y, d = Math.hypot(dx, dy) || 1;
+          var f = Math.exp(-(d * d) / (R * R));
+          tx = dx / d * f * S * 0.7; ty = dy / d * f * S * 0.7; tl = f;
+        }
+        if (pass === 0) {
+          t.hx += (tx - t.hx) * 0.16; t.hy += (ty - t.hy) * 0.16; t.hl += (tl - t.hl) * 0.16;
+        }
+        st.x += t.hx; st.y += t.hy; st.lift += t.hl * 0.9; st.scale *= 1 + t.hl * 0.22;
+        st.rot += t.hl * (t.r3 - 0.5) * 0.5;
+
+        if (sweep >= 0) {
+          var diag = (t.x / W) * 0.75 + (t.y / H) * 0.25;
+          var dd = (diag - sweepPos) / 0.07;
+          st.glow += 0.32 * Math.exp(-dd * dd);
+        }
+
+        var size = S * st.scale;
+        var cos = Math.cos(st.rot) * size, sin = Math.sin(st.rot) * size;
+        var c = t.corners;
+
+        if (pass === 0) {
+          // Ombre portée : plus la tesselle est haute, plus l'ombre est décalée et légère.
+          var off = 1 + st.lift * S * 0.6;
+          ctx.globalAlpha = st.alpha * (0.32 - Math.min(0.2, st.lift * 0.1));
+          ctx.fillStyle = 'rgb(' + shadowRGB + ')';
+          quad(c, st.x + off * 0.5, st.y + off, cos, sin, 1.04);
+          ctx.fill();
+          continue;
+        }
+
+        ctx.globalAlpha = st.alpha;
+        ctx.fillStyle = t.fill;
+        quad(c, st.x, st.y, cos, sin, 1);
+        ctx.fill();
+        // Facette claire en haut à gauche : le reflet de l'émail.
+        ctx.fillStyle = t.facet;
+        ctx.globalAlpha = st.alpha * 0.55;
+        ctx.beginPath();
+        pt(c[0], st.x, st.y, cos, sin, 1, true);
+        pt(c[1], st.x, st.y, cos, sin, 1);
+        pt(c[3], st.x, st.y, cos, sin, 1);
+        ctx.closePath();
+        ctx.fill();
+        // Arête sombre en bas à droite.
+        ctx.strokeStyle = t.edge;
+        ctx.globalAlpha = st.alpha * 0.5;
+        ctx.lineWidth = Math.max(0.6, S * 0.06);
+        ctx.beginPath();
+        pt(c[1], st.x, st.y, cos, sin, 1, true);
+        pt(c[2], st.x, st.y, cos, sin, 1);
+        pt(c[3], st.x, st.y, cos, sin, 1);
+        ctx.stroke();
+        if (st.glow > 0.01) {
+          ctx.globalAlpha = Math.min(1, st.glow) * st.alpha;
+          ctx.fillStyle = '#fff';
+          quad(c, st.x, st.y, cos, sin, 1);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  function pt(p, x, y, cos, sin, k, move) {
+    var px = x + (p[0] * cos - p[1] * sin) * k;
+    var py = y + (p[0] * sin + p[1] * cos) * k;
+    if (move) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  function quad(c, x, y, cos, sin, k) {
+    ctx.beginPath();
+    pt(c[0], x, y, cos, sin, k, true);
+    pt(c[1], x, y, cos, sin, k);
+    pt(c[2], x, y, cos, sin, k);
+    pt(c[3], x, y, cos, sin, k);
+    ctx.closePath();
+  }
+
+  /* ---------- Commandes ---------- */
+  document.querySelectorAll('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () { play(b.getAttribute('data-mode')); });
+  });
+  document.getElementById('replay').addEventListener('click', function () { play(); });
+  window.addEventListener('keydown', function (e) {
+    if (e.key === '1') play('chute');
+    else if (e.key === '2') play('tourbillon');
+    else if (e.key === '3') play('pose');
+    else if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    var r = canvas.getBoundingClientRect();
+    pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top; pointer.active = true;
+  });
+  canvas.addEventListener('pointerleave', function () { pointer.active = false; });
+  canvas.addEventListener('pointerdown', function (e) {
+    var r = canvas.getBoundingClientRect();
+    pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top; pointer.active = true;
+  });
+
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var wasDone = performance.now() - t0 > totalDuration;
+      build();
+      if (wasDone) t0 = performance.now() - totalDuration - 1;
+    }, 150);
+  });
+
+  function start() {
+    build();
+    play();
+    requestAnimationFrame(frame);
+  }
+  var started = false;
+  function go() { if (!started) { started = true; start(); } }
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('100px "Archivo Black"').then(go, go);
+    setTimeout(go, 1800);
+  } else {
+    go();
+  }
+})();
+</script>
