@@ -1,22 +1,22 @@
 <title>Galvez Martin en mosaïque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
 <style>
-  /* Une seule scène : un mur orange, le nom en wildstyle fait de 120 éclats de mosaïque. */
+  /* Une seule scène : un pavement grec, une bordure à grecque, le nom posé en éclats. */
   :root {
-    --wall: #e8925a;
-    --panel: rgba(24, 16, 30, .8);
-    --panel-ink: #f6f1ea;
+    --floor: #ece4d3;
+    --panel: rgba(30, 46, 62, .82);
+    --panel-ink: #f5efe3;
     --ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: light;
   }
   html, body { height: 100%; }
-  body { margin: 0; background: var(--wall); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
+  body { margin: 0; background: var(--floor); color: var(--panel-ink); font-family: var(--ui); overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   .controls {
     position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     padding: 6px; border-radius: 14px;
   }
@@ -28,83 +28,32 @@
   .controls button:focus-visible { outline: 2px solid var(--panel-ink); outline-offset: 1px; }
 </style>
 
-<canvas id="mur" role="img" aria-label="Galvez Martin, écrit en wildstyle avec 120 éclats de mosaïque"></canvas>
+<canvas id="mur" role="img" aria-label="Galvez Martin, en mosaïque à la grecque"></canvas>
 <div class="controls"><button type="button" id="rejouer">↻ Rejouer</button></div>
 
 <script>
 (function () {
   'use strict';
 
-  /* ---------- Couleurs, tirées du mur de référence ---------- */
-  var WALL = '#e8925a';
-  var INKS = ['#0d0b14', '#0d0b14', '#0d0b14', '#120e22', '#1e1640', '#2d1b5e', '#2b2a35'];
-  var RIM = '#fbf6f1';
+  /* ---------- Palette : bleus et verts de Provence, fond de pierre calcaire ---------- */
+  var BLUES = ['#2e5f94', '#264f7d', '#3b75ad', '#4f87bd', '#1f416a', '#6a9ccc'];
+  var GREENS = ['#5f7d3a', '#6e8a3e', '#4f6b30', '#7f9c5a', '#4f7a63', '#8fb39a'];
+  var STONE = ['#efe7d6', '#ebe2cf', '#f3ecdf', '#e6dcc6', '#f0e9da'];
+  var GROUT = '#cdbfa6';
+  var LETTER_GROUT = '#2a3036';
+  var FRAME_BLUE = ['#2e5f94', '#2a5788', '#34679c'];
+  var FRAME_GREEN = ['#6e8a3e', '#647f37', '#78944a'];
 
-  /* ---------- Lettres : 1 à 3 éclats chacune (triangles ou quadrilatères) ----------
-     Hauteur de capitale = 1, y vers le bas. Les éclats d'une lettre se touchent
-     bord à bord ; le joint entre eux laisse voir le mur. */
-  var LETTERS = {
-    G: { w: 0.95, s: [
-      [[-0.14, -0.16], [0.27, 0.0], [0.27, 1.0], [0.0, 0.96]],          // fût avec pointe
-      [[0.27, 0.0], [0.97, -0.07], [0.82, 0.2], [0.27, 0.2]],           // barre du haut
-      [[0.27, 0.8], [0.97, 0.42], [0.92, 1.02], [0.27, 1.0]]            // pied qui remonte
-    ] },
-    A: { w: 1.0, s: [
-      [[-0.12, 1.08], [0.32, 0.0], [0.5, 0.0], [0.3, 1.0]],
-      [[0.5, 0.0], [0.72, -0.05], [1.04, 1.0], [0.72, 1.0]],
-      [[0.39, 0.55], [0.621, 0.55], [0.6584, 0.72], [0.356, 0.72]]     // barre, calée entre les jambes
-    ] },
-    L: { w: 0.8, s: [
-      [[0.0, 0.08], [0.27, -0.12], [0.27, 0.78], [0.0, 0.78]],
-      [[0.0, 0.78], [0.62, 0.78], [0.94, 1.06], [0.0, 1.0]]
-    ] },
-    V: { w: 0.96, s: [
-      [[-0.12, -0.16], [0.27, 0.0], [0.5, 0.72], [0.46, 1.04]],
-      [[0.66, 0.0], [0.97, -0.06], [0.46, 1.04], [0.5, 0.72]]
-    ] },
-    E: { w: 0.88, s: [
-      [[0.0, 0.0], [0.86, -0.05], [0.72, 0.2], [0.0, 0.2]],
-      [[0.0, 0.2], [0.28, 0.2], [0.64, 0.5], [0.0, 0.8]],               // fût + flèche du milieu
-      [[0.0, 0.8], [0.72, 0.8], [0.9, 1.03], [0.0, 1.0]]
-    ] },
-    Z: { w: 0.92, s: [
-      [[-0.16, -0.12], [0.9, 0.0], [0.86, 0.2], [0.0, 0.2]],
-      [[0.6, 0.2], [0.86, 0.2], [0.3, 0.8], [0.04, 0.8]],
-      [[0.0, 0.8], [0.88, 0.8], [1.0, 1.05], [0.0, 1.0]]
-    ] },
-    M: { w: 1.16, s: [
-      [[-0.06, -0.18], [0.25, 0.0], [0.25, 1.0], [0.0, 1.04]],
-      [[0.25, 0.0], [0.9, 0.0], [0.575, 0.74]],                         // le V du milieu
-      [[0.9, 0.0], [1.22, -0.18], [1.15, 1.04], [0.9, 1.0]]
-    ] },
-    R: { w: 0.98, s: [
-      [[0.0, 0.0], [0.26, 0.0], [0.26, 1.0], [-0.04, 1.08]],
-      [[0.26, 0.0], [0.8, 0.02], [0.92, 0.3], [0.26, 0.52]],            // panse
-      [[0.4, 0.473], [0.66, 0.387], [1.04, 1.06], [0.74, 1.04]]         // jambe
-    ] },
-    T: { w: 0.92, s: [
-      [[-0.14, -0.02], [0.92, -0.08], [0.86, 0.2], [0.0, 0.2]],
-      [[0.32, 0.2], [0.6, 0.2], [0.58, 0.95], [0.36, 1.2]]
-    ] },
-    I: { w: 0.44, s: [
-      [[0.04, 0.05], [0.32, -0.22], [0.32, 1.0], [0.04, 1.0]]
-    ] },
-    N: { w: 1.2, s: [
-      [[0.0, 0.0], [0.24, 0.0], [0.24, 1.0], [-0.04, 1.06]],
-      [[0.24, 0.0], [0.52, 0.0], [0.92, 0.62], [0.92, 1.0]],
-      [[0.92, 0.0], [1.3, -0.26], [1.16, 1.0], [0.92, 1.0]]
-    ] }
-  };
-  var NAME = ['GALVEZ', 'MARTIN'];
-  var PIECES = 120;
+  // Grecque : une spirale par période de 6 tesselles, sur 5 rangs.
+  var KEY = ['XXXXX.', 'X...X.', 'X.XXX.', 'X.....', 'XXXXXX'];
 
   var canvas = document.getElementById('mur');
   var ctx = canvas.getContext('2d');
   var bed = document.createElement('canvas');
   var bctx = bed.getContext('2d');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var W, H, DPR, FS, GAP, RIMW;
-  var pieces = [], info = {};
+  var W, H, DPR, FS, T, GAP;
+  var pieces = [], info = {}, frame = null;
   var t0 = 0, running = false;
 
   /* ---------- Outils ---------- */
@@ -117,37 +66,40 @@
     };
   }
   var R = rng(1);
-  function centroid(p) {
-    var x = 0, y = 0;
-    p.forEach(function (q) { x += q[0]; y += q[1]; });
-    return [x / p.length, y / p.length];
+  function pick(a) { return a[(R() * a.length) | 0]; }
+  function inPoly(p, x, y) {
+    var c = false;
+    for (var i = 0, j = p.length - 1; i < p.length; j = i++) {
+      var a = p[i], b = p[j];
+      if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
+    }
+    return c;
   }
-  function bbox(p) {
-    var b = [Infinity, Infinity, -Infinity, -Infinity];
-    p.forEach(function (q) { b[0] = Math.min(b[0], q[0]); b[1] = Math.min(b[1], q[1]); b[2] = Math.max(b[2], q[0]); b[3] = Math.max(b[3], q[1]); });
-    return b;
+  // Coupe un polygone convexe par une droite (point + direction) : deux polygones convexes.
+  function cut(poly, px, py, dx, dy) {
+    var A = [], B = [], n = poly.length;
+    function side(v) { return (v[0] - px) * dy - (v[1] - py) * dx; }
+    for (var i = 0; i < n; i++) {
+      var a = poly[i], b = poly[(i + 1) % n], sa = side(a), sb = side(b);
+      if (sa >= 0) A.push(a); else B.push(a);
+      if ((sa >= 0) !== (sb >= 0)) {
+        var t = sa / (sa - sb), m = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        A.push(m); B.push(m);
+      }
+    }
+    return [A, B];
   }
-  function hex(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
-  function css(c, k) {
-    k = k || 0; var t = k > 0 ? 255 : 0, a = Math.abs(k);
-    return 'rgb(' + ((c[0] + (t - c[0]) * a) | 0) + ',' + ((c[1] + (t - c[1]) * a) | 0) + ',' + ((c[2] + (t - c[2]) * a) | 0) + ')';
-  }
-  // Rétrécit un polygone convexe en reculant chaque côté de d (vrai décalage parallèle).
-  // d : une distance, ou une distance par côté.
+  // Recule chaque côté d'un polygone convexe de d (joint entre éclats).
   function inset(p, d) {
-    var n = p.length, s = 0, out = [];
-    var dd = typeof d === 'number' ? p.map(function () { return d; }) : d;
-    for (var i = 0; i < n; i++) { var a = p[i], b = p[(i + 1) % n]; s += a[0] * b[1] - b[0] * a[1]; }
+    var n = p.length, s = 0, out = [], lines = [], i;
+    for (i = 0; i < n; i++) { var a = p[i], b = p[(i + 1) % n]; s += a[0] * b[1] - b[0] * a[1]; }
     var dir = s > 0 ? 1 : -1;
-    var lines = [];
     for (i = 0; i < n; i++) {
       var a2 = p[i], b2 = p[(i + 1) % n], dx = b2[0] - a2[0], dy = b2[1] - a2[1], l = Math.hypot(dx, dy) || 1;
-      var nx = -dy / l * dir, ny = dx / l * dir;               // normale intérieure
-      lines.push([a2[0] + nx * dd[i], a2[1] + ny * dd[i], dx, dy]);
+      lines.push([a2[0] - dy / l * dir * d, a2[1] + dx / l * dir * d, dx, dy]);
     }
     for (i = 0; i < n; i++) {
-      var L1 = lines[(i - 1 + n) % n], L2 = lines[i];
-      var den = L1[2] * L2[3] - L1[3] * L2[2];
+      var L1 = lines[(i - 1 + n) % n], L2 = lines[i], den = L1[2] * L2[3] - L1[3] * L2[2];
       if (Math.abs(den) < 1e-9) { out.push([L2[0], L2[1]]); continue; }
       var t = ((L2[0] - L1[0]) * L2[3] - (L2[1] - L1[1]) * L2[2]) / den;
       out.push([L1[0] + L1[2] * t, L1[1] + L1[3] * t]);
@@ -155,214 +107,221 @@
     return out;
   }
 
-  /* ---------- Découpe des éclats : jamais plus de 4 côtés ----------
-     Chaque éclat garde la trace de ses côtés « extérieurs » (le bord de la
-     lettre, qui reçoit l'émail blanc) et de ses côtés de coupe (simple joint). */
-  function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
-  function len(a, b) { return Math.hypot(b[0] - a[0], b[1] - a[1]); }
-  function polyArea(v) {
-    var a = 0;
-    for (var i = 0; i < v.length; i++) { var p = v[i], q = v[(i + 1) % v.length]; a += p[0] * q[1] - q[0] * p[1]; }
-    return Math.abs(a) / 2;
-  }
-  function minWidth(v) {
-    // largeur minimale approximative : aire / plus grand côté
-    var m = 0;
-    for (var i = 0; i < v.length; i++) m = Math.max(m, len(v[i], v[(i + 1) % v.length]));
-    return polyArea(v) / m * (v.length === 3 ? 2 : 1);
-  }
-  function split(sh) {
-    var v = sh.v, e = sh.e, t = 0.35 + R() * 0.3, t2 = 0.35 + R() * 0.3;
-    if (v.length === 4) {
-      var l0 = len(v[0], v[1]) + len(v[2], v[3]), l1 = len(v[1], v[2]) + len(v[3], v[0]);
-      if (R() < 0.3) {
-        // diagonale : deux triangles
-        var k = R() < 0.5 ? 0 : 1;
-        var a = v[k], b = v[k + 1], c = v[k + 2], d = v[(k + 3) % 4];
-        var ea = e[k], eb = e[k + 1], ec = e[(k + 2) % 4], ed = e[(k + 3) % 4];
-        return [{ v: [a, b, c], e: [ea, eb, false] }, { v: [a, c, d], e: [false, ec, ed] }];
-      }
-      // coupe d'un côté au côté opposé, à travers la plus grande longueur : deux quadrilatères
-      var o = l0 >= l1 ? 0 : 1;
-      var A = v[o], B = v[o + 1], C = v[(o + 2) % 4], D = v[(o + 3) % 4];
-      var eA = e[o], eB = e[o + 1], eC = e[(o + 2) % 4], eD = e[(o + 3) % 4];
-      var P = lerp(A, B, t), Q = lerp(D, C, t2);
-      return [{ v: [A, P, Q, D], e: [eA, false, eC, eD] }, { v: [P, B, C, Q], e: [eA, eB, eC, false] }];
-    }
-    // triangle : depuis le sommet opposé au plus grand côté, ou en travers (triangle + trapèze)
-    var L = [len(v[0], v[1]), len(v[1], v[2]), len(v[2], v[0])];
-    var i = L.indexOf(Math.max.apply(null, L));
-    var a2 = v[i], b2 = v[(i + 1) % 3], c2 = v[(i + 2) % 3];
-    var ea2 = e[i], eb2 = e[(i + 1) % 3], ec2 = e[(i + 2) % 3];
-    if (R() < 0.6) {
-      var M = lerp(a2, b2, t);
-      return [{ v: [a2, M, c2], e: [ea2, false, ec2] }, { v: [M, b2, c2], e: [ea2, eb2, false] }];
-    }
-    var P2 = lerp(c2, a2, t), Q2 = lerp(b2, c2, 1 - t);   // coupe parallèle au grand côté
-    return [{ v: [a2, b2, Q2, P2], e: [ea2, eb2, false, ec2] }, { v: [P2, Q2, c2], e: [false, eb2, ec2] }];
-  }
-  function subdivide(shapes, total) {
-    var guard = 0;
-    while (shapes.length < total && guard++ < 2000) {
-      // on coupe le plus gros éclat encore assez épais
-      var best = -1, bestA = 0;
-      shapes.forEach(function (sh, i) {
-        var a = polyArea(sh.v);
-        if (!sh.lock && a > bestA && minWidth(sh.v) > FS * 0.07) { bestA = a; best = i; }
+  /* ---------- Mise en page : le nom, puis le cadre autour ---------- */
+  function font(italic, size) { return (italic ? 'italic ' : '') + '400 ' + size + 'px "Instrument Serif", "Times New Roman", serif'; }
+
+  function layout() {
+    var m = document.createElement('canvas').getContext('2d');
+    T = Math.round(Math.max(6, Math.min(12, Math.min(W, H) * 0.013)));   // tesselle du pavement
+    var band = 9 * T, margin = 16, bottomUI = 70;
+    var availW = W - 2 * margin - 2 * band, availH = H - margin - bottomUI - 2 * band;
+    var words = [{ t: 'Galvez', it: false }, { t: 'Martin', it: true }];
+    function width(wd, size) { m.font = font(wd.it, size); return m.measureText(wd.t).width; }
+    var space = 0.22;
+    var oneW = width(words[0], 100) + width(words[1], 100) + space * 100;
+    var twoW = Math.max(width(words[0], 100), width(words[1], 100));
+    var padX = 0.32, padY = 0.3;                                   // marges intérieures, en hauteur de lettre
+    var fsOne = Math.min(availW / (oneW / 100 + 2 * padX), availH / (0.95 + 2 * padY));
+    var fsTwo = Math.min(availW / (twoW / 100 + 2 * padX), availH / (1.85 + 2 * padY));
+    var two = fsTwo > fsOne * 1.25;
+    FS = Math.min(two ? fsTwo : fsOne, 230);
+    GAP = Math.max(2.5, FS * 0.022);
+
+    // Position de chaque lettre.
+    var glyphs = [];
+    var lines = two ? [[words[0]], [words[1]]] : [[words[0], words[1]]];
+    var lineH = FS * 0.95, blockH = lines.length * lineH;
+    var baseY = H / 2 - bottomUI / 2 + margin / 2 - blockH / 2 + FS * 0.74;
+    lines.forEach(function (line, li) {
+      var total = line.reduce(function (s, wd, i) { return s + width(wd, FS) + (i ? space * FS : 0); }, 0);
+      var x = W / 2 - total / 2;
+      line.forEach(function (wd, wi) {
+        if (wi) x += space * FS;
+        m.font = font(wd.it, FS);
+        // On place les lettres une à une, en gardant l'approche du mot.
+        Array.from(wd.t).forEach(function (ch, ci) {
+          var before = m.measureText(wd.t.slice(0, ci)).width;
+          var mt = m.measureText(ch);
+          glyphs.push({ ch: ch, it: wd.it, x: x + before, y: baseY + li * lineH, m: mt, word: wd.it ? 1 : 0 });
+        });
+        x += width(wd, FS);
       });
-      if (best < 0) break;
-      var parts = split(shapes[best]);
-      if (parts.some(function (p) { return minWidth(p.v) < FS * 0.035; })) {
-        parts = split(shapes[best]);                       // un autre essai
-        if (parts.some(function (p) { return minWidth(p.v) < FS * 0.035; })) { shapes[best].lock = true; continue; }
+    });
+
+    // Cadre aligné sur la grille des tesselles.
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    glyphs.forEach(function (g) {
+      minX = Math.min(minX, g.x - g.m.actualBoundingBoxLeft); maxX = Math.max(maxX, g.x + g.m.actualBoundingBoxRight);
+      minY = Math.min(minY, g.y - g.m.actualBoundingBoxAscent); maxY = Math.max(maxY, g.y + g.m.actualBoundingBoxDescent);
+    });
+    var innerW = (maxX - minX) + 2 * padX * FS, innerH = (maxY - minY) + 2 * padY * FS;
+    var cols = Math.ceil(innerW / T / 6) * 6, rows = Math.ceil(innerH / T / 6) * 6;  // périodes entières de grecque
+    var gx = Math.round(((minX + maxX) / 2) / T - cols / 2) - 9;
+    var gy = Math.round(((minY + maxY) / 2) / T - rows / 2) - 9;
+    frame = { L: gx, T: gy, R: gx + cols + 17, B: gy + rows + 17 };
+    info = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: (maxX - minX) / 2, ry: (maxY - minY) / 2 };
+    return glyphs;
+  }
+
+  /* ---------- Pavement et bordure ---------- */
+  function frameColor(i, j) {
+    var f = frame;
+    if (i < f.L || i > f.R || j < f.T || j > f.B) return null;
+    var dl = i - f.L, dr = f.R - i, dt = j - f.T, db = f.B - j;
+    var u = Math.min(dl, dr), v = Math.min(dt, db);
+    if (u >= 9 && v >= 9) return null;
+    if (u < 9 && v < 9) {                                // coins : carré concentrique
+      if (u === 0 || v === 0 || u === 8 || v === 8) return pick(FRAME_GREEN);
+      if (u >= 2 && u <= 6 && v >= 2 && v <= 6 && (u === 2 || u === 6 || v === 2 || v === 6 || (u === 4 && v === 4))) return pick(FRAME_BLUE);
+      return null;
+    }
+    var r, k;
+    if (v < 9) { r = v; k = (i - (f.L + 9)) % 6; } else { r = u; k = (j - (f.T + 9)) % 6; }
+    if (r === 0 || r === 8) return pick(FRAME_GREEN);
+    if (r >= 2 && r <= 6 && KEY[r - 2][(k + 6) % 6] === 'X') return pick(FRAME_BLUE);
+    return null;
+  }
+
+  function drawFloor() {
+    var c = bctx, gr = rng(4);
+    var saved = R; R = gr;
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    c.fillStyle = GROUT;
+    c.fillRect(0, 0, W, H);
+    var cols = Math.ceil(W / T) + 1, rows = Math.ceil(H / T) + 1, g = Math.max(1, T * 0.14);
+    for (var j = 0; j < rows; j++) {
+      for (var i = 0; i < cols; i++) {
+        var col = frameColor(i, j) || pick(STONE);
+        var jx = (gr() - 0.5) * T * 0.12, jy = (gr() - 0.5) * T * 0.12, s = T - g;
+        c.fillStyle = col;
+        c.fillRect(i * T + g / 2 + jx, j * T + g / 2 + jy, s * (0.92 + gr() * 0.08), s * (0.92 + gr() * 0.08));
       }
-      parts.forEach(function (p) { p.stroke = shapes[best].stroke; });
-      shapes.splice(best, 1, parts[0], parts[1]);
     }
-    return shapes;
+    R = saved;
   }
 
-  function path(c, q, r) {
-    var n = q.length;
-    c.beginPath();
-    for (var i = 0; i < n; i++) {
-      var a = q[(i - 1 + n) % n], b = q[i], d = q[(i + 1) % n];
-      if (i === 0) c.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
-      c.arcTo(b[0], b[1], (b[0] + d[0]) / 2, (b[1] + d[1]) / 2, r);
-    }
-    c.closePath();
-  }
-
-  /* ---------- Construction ---------- */
+  /* ---------- Les lettres découpées en 3 ou 4 éclats ---------- */
   function build() {
     W = window.innerWidth; H = window.innerHeight;
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = bed.width = Math.round(W * DPR);
     canvas.height = bed.height = Math.round(H * DPR);
-    R = rng(21);
+    R = rng(31);
     pieces = [];
+    var glyphs = layout();
+    var tIn = Math.max(4, FS * 0.032);                     // tesselles à l'intérieur des lettres
 
-    var oneLine = W / H > 2.1;
-    var lines = oneLine ? [NAME.join(' ')] : NAME;
-    var TRACK = 0.12, SPACE = 0.5, SHEAR = 0.2;
-    function lineWidth(t) {
-      var w = 0;
-      Array.from(t).forEach(function (ch) { w += ch === ' ' ? SPACE : LETTERS[ch].w + TRACK; });
-      return w + 0.35;
-    }
-    var maxW = Math.max.apply(null, lines.map(lineWidth));
-    FS = Math.min(W * 0.84 / maxW, H * (oneLine ? 0.36 : 0.28));
-    GAP = Math.max(2, FS * 0.02);            // le joint : on doit toujours voir les éclats
-    RIMW = Math.max(2.5, FS * 0.045);            // émail blanc sur le bord de chaque éclat
-    var lineH = FS * 1.5;
-    var top0 = H / 2 - ((lines.length - 1) * lineH + FS) / 2 - FS * 0.06;
+    glyphs.forEach(function (g, gi) {
+      var pad = FS * 0.06;
+      var x0 = Math.floor(g.x - g.m.actualBoundingBoxLeft - pad), y0 = Math.floor(g.y - g.m.actualBoundingBoxAscent - pad);
+      var x1 = Math.ceil(g.x + g.m.actualBoundingBoxRight + pad), y1 = Math.ceil(g.y + g.m.actualBoundingBoxDescent + pad);
+      var w = x1 - x0, h = y1 - y0;
 
-    var shapes = [];
-    lines.forEach(function (text, li) {
-      var x = W / 2 - lineWidth(text) * FS / 2 + 0.2 * FS + (lines.length > 1 ? (li ? 0.22 : -0.22) * FS : 0);
-      var y0 = top0 + li * lineH;
-      Array.from(text).forEach(function (ch, ci) {
-        if (ch === ' ') { x += SPACE * FS; return; }
-        var L = LETTERS[ch], rot = (R() - 0.5) * 0.12, dy = (R() - 0.5) * 0.1 * FS;
-        var cx = x + L.w * FS / 2, cy = y0 + FS / 2;
-        L.s.forEach(function (poly) {
-          var pts = poly.map(function (v) {
-            var px = v[0] + (1 - v[1]) * SHEAR - SHEAR / 2;
-            var X = x + px * FS - cx, Y = y0 + v[1] * FS + dy - cy;
-            return [cx + X * Math.cos(rot) - Y * Math.sin(rot), cy + X * Math.sin(rot) + Y * Math.cos(rot)];
-          });
-          shapes.push({ v: pts, e: pts.map(function () { return true; }), stroke: shapes.length });
-        });
-        x += (L.w + TRACK) * FS;
+      // Masque de la lettre, pour savoir où est l'encre.
+      var mk = document.createElement('canvas'); mk.width = w; mk.height = h;
+      var mc = mk.getContext('2d', { willReadFrequently: true });
+      mc.font = font(g.it, FS); mc.fillStyle = '#000';
+      mc.fillText(g.ch, g.x - x0, g.y - y0);
+      var data = mc.getImageData(0, 0, w, h).data;
+      var ink = [];
+      for (var yy = 0; yy < h; yy += 2) for (var xx = 0; xx < w; xx += 2) if (data[(yy * w + xx) * 4 + 3] > 100) ink.push([xx + x0, yy + y0]);
+      function inkIn(poly) { var n = 0; ink.forEach(function (p) { if (inPoly(poly, p[0], p[1])) n++; }); return n; }
+
+      // Coupes droites successives à travers la lettre.
+      var want = R() < 0.5 ? 3 : 4;
+      var cells = [[[x0, y0], [x1, y0], [x1, y1], [x0, y1]]];
+      var guard = 0;
+      while (cells.length < want && guard++ < 80) {
+        var counts = cells.map(inkIn), bi = counts.indexOf(Math.max.apply(null, counts));
+        var cell = cells[bi];
+        var pts = ink.filter(function (p) { return inPoly(cell, p[0], p[1]); });
+        if (pts.length < 8) break;
+        var mx = 0, my = 0; pts.forEach(function (p) { mx += p[0]; my += p[1]; }); mx /= pts.length; my /= pts.length;
+        var ang = (R() < 0.6 ? 0 : Math.PI / 2) + (R() - 0.5) * 1.3;
+        var off = (R() - 0.5) * FS * 0.15;
+        var halves = cut(cell, mx + Math.cos(ang + Math.PI / 2) * off, my + Math.sin(ang + Math.PI / 2) * off, Math.cos(ang), Math.sin(ang));
+        if (halves[0].length < 3 || halves[1].length < 3) continue;
+        var ia = inkIn(halves[0]), ib = inkIn(halves[1]);
+        if (Math.min(ia, ib) < ink.length * 0.12) continue;      // chaque éclat garde un vrai morceau de lettre
+        cells.splice(bi, 1, halves[0], halves[1]);
+      }
+
+      var family = g.word ? GREENS : BLUES;
+      cells.forEach(function (cell) {
+        var poly = inset(cell, GAP / 2);
+        var tone = R();
+        var cv = document.createElement('canvas');
+        cv.width = Math.ceil(w * DPR); cv.height = Math.ceil(h * DPR);
+        var c = cv.getContext('2d');
+        c.scale(DPR, DPR); c.translate(-x0, -y0);
+        c.beginPath(); poly.forEach(function (p, k) { if (k) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath();
+        c.clip();
+        c.font = font(g.it, FS);
+        c.fillStyle = LETTER_GROUT;
+        c.fillText(g.ch, g.x, g.y);
+        // Tesselles dans la lettre, sur une grille commune à tout le nom.
+        c.globalCompositeOperation = 'source-atop';
+        var gg = Math.max(0.8, tIn * 0.16);
+        for (var ty = Math.floor(y0 / tIn) * tIn; ty < y1; ty += tIn) {
+          for (var tx = Math.floor(x0 / tIn) * tIn; tx < x1; tx += tIn) {
+            var col = R() < 0.75 ? family[Math.floor(tone * 3) % family.length] : pick(family);
+            c.fillStyle = col;
+            c.fillRect(tx + gg / 2 + (R() - .5) * tIn * 0.1, ty + gg / 2 + (R() - .5) * tIn * 0.1, tIn - gg, tIn - gg);
+          }
+        }
+        // Lumière rasante : haut plus clair.
+        var grd = c.createLinearGradient(0, y0, 0, y1);
+        grd.addColorStop(0, 'rgba(255,255,255,.16)'); grd.addColorStop(1, 'rgba(0,0,0,.1)');
+        c.fillStyle = grd; c.fillRect(x0, y0, w, h);
+        // Ombre portée pré-calculée (silhouette).
+        var sh = document.createElement('canvas'); sh.width = cv.width; sh.height = cv.height;
+        var sc = sh.getContext('2d');
+        sc.drawImage(cv, 0, 0); sc.globalCompositeOperation = 'source-in';
+        sc.fillStyle = 'rgb(60,45,25)'; sc.fillRect(0, 0, sh.width, sh.height);
+        var cx = 0, cy = 0; poly.forEach(function (p) { cx += p[0]; cy += p[1]; }); cx /= poly.length; cy /= poly.length;
+        pieces.push({ img: cv, shadow: sh, x0: x0, y0: y0, w: w, h: h, c: [cx, cy] });
       });
     });
-
-    // 31 éclats dessinés, redécoupés jusqu'à 120.
-    subdivide(shapes, PIECES);
-    var strokeInk = {};
-    shapes.forEach(function (sh) {
-      if (!(sh.stroke in strokeInk)) strokeInk[sh.stroke] = (R() * INKS.length) | 0;
-      var ink = INKS[R() < 0.6 ? strokeInk[sh.stroke] : (R() * INKS.length) | 0];
-      var q = inset(sh.v, GAP / 2);
-      var inner = inset(q, sh.e.map(function (out) { return out ? RIMW : 0; }));
-      if (polyArea(inner) < polyArea(q) * 0.15) inner = q;  // trop petit pour l'émail
-      pieces.push({ q: q, inner: inner, c: centroid(q), ink: hex(ink), tone: (R() - 0.5) * 0.1 });
-    });
-
-    var all = bbox([].concat.apply([], pieces.map(function (p) { return p.q; })));
-    info = { cx: (all[0] + all[2]) / 2, cy: (all[1] + all[3]) / 2, rx: (all[2] - all[0]) / 2, ry: (all[3] - all[1]) / 2, count: pieces.length };
+    info.count = pieces.length;
     plan();
   }
 
-  /* ---------- Animation : du centre vers les extrémités, du spectateur vers le mur ---------- */
-  var IMPACT = 180;
+  /* ---------- Animation : même chute, du spectateur vers le mur, du centre vers les bords ---------- */
+  var IMPACT = 170;
   function plan() {
     var last = 0;
     pieces.forEach(function (p) {
       p.r1 = R(); p.r2 = R(); p.r3 = R(); p.r4 = R();
       var dn = Math.min(1, Math.hypot((p.c[0] - info.cx) / info.rx, (p.c[1] - info.cy) / (info.ry * 1.6)));
-      p.delay = 150 + dn * 1700 + p.r1 * 160;
+      p.delay = 200 + dn * 1700 + p.r1 * 180;
       p.dur = 560 + p.r2 * 160;
-      p.rot0 = (p.r3 - 0.5) * 3.2;
+      p.rot0 = (p.r3 - 0.5) * 3;
       p.tilt0 = 0.5 + p.r4 * 0.8;
       p.axis = p.r1 * Math.PI;
-      p.lx = (p.r2 - 0.5) * FS * 1.2; p.ly = (p.r3 - 0.5) * FS * 0.8 - FS * 0.3;
+      p.lx = (p.r2 - 0.5) * FS * 1.1; p.ly = (p.r3 - 0.5) * FS * 0.7 - FS * 0.3;
       p.placed = false; p.hit = false;
       last = Math.max(last, p.delay + p.dur + IMPACT);
     });
     info.total = last;
   }
 
-  function drawWall() {
-    bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    bctx.fillStyle = WALL;
-    bctx.fillRect(0, 0, W, H);
-    // Halo rose bombé derrière le nom, comme sur le mur de référence.
-    bctx.save();
-    bctx.translate(info.cx, info.cy + info.ry * 0.25);
-    bctx.scale(1, Math.max(0.4, info.ry / info.rx * 1.4));
-    var g = bctx.createRadialGradient(0, 0, 0, 0, 0, info.rx * 1.15);
-    g.addColorStop(0, 'rgba(255,118,168,.42)');
-    g.addColorStop(0.6, 'rgba(255,118,168,.14)');
-    g.addColorStop(1, 'rgba(255,118,168,0)');
-    bctx.fillStyle = g;
-    bctx.fillRect(-W * 2, -H * 4, W * 4, H * 8);
-    bctx.restore();
-    var gr = rng(9);
-    for (var i = 0; i < W * H / 50; i++) {
-      bctx.fillStyle = gr() < 0.5 ? 'rgba(255,255,255,.06)' : 'rgba(90,40,10,.07)';
-      bctx.fillRect(gr() * W, gr() * H, 1 + gr() * 1.5, 1 + gr() * 1.5);
-    }
-  }
-
-  // Un éclat posé : ombre dans le joint, bord émaillé blanc, cœur sombre facetté.
-  function drawPiece(c, q, inner, p, alpha, flash) {
-    var r = Math.max(1.5, FS * 0.012);
+  function drawPieceAt(c, p, img, px, py, scale, rot, tilt, alpha) {
+    c.save();
     c.globalAlpha = alpha;
-    c.fillStyle = RIM;
-    path(c, q, r); c.fill();
-    var bb = bbox(inner);
-    var g = c.createLinearGradient(bb[0], bb[1], bb[2], bb[3]);
-    g.addColorStop(0, css(p.ink, p.tone + 0.16));
-    g.addColorStop(0.45, css(p.ink, p.tone));
-    g.addColorStop(1, css(p.ink, p.tone - 0.05));
-    c.fillStyle = g;
-    path(c, inner, r * 0.6); c.fill();
-    // Reflet de vernis sur l'arête haute.
-    c.strokeStyle = 'rgba(255,255,255,.35)';
-    c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(inner[0][0], inner[0][1]); c.lineTo(inner[1][0], inner[1][1]);
-    c.stroke();
-    if (flash > 0) { c.globalAlpha = flash; c.fillStyle = '#fff'; path(c, q, r); c.fill(); }
-    c.globalAlpha = 1;
+    c.translate(px, py);
+    c.rotate(rot + p.axis);
+    c.scale(tilt * scale, scale);
+    c.rotate(-p.axis);
+    c.drawImage(img, p.x0 - p.c[0], p.y0 - p.c[1], p.w, p.h);
+    c.restore();
   }
 
   function placeOnBed(p) {
-    bctx.fillStyle = 'rgba(80,30,8,.35)';
-    path(bctx, p.q.map(function (v) { return [v[0] + 1.5, v[1] + 2]; }), 2);
-    bctx.fill();
-    drawPiece(bctx, p.q, p.inner, p, 1, 0);
+    bctx.save();
+    bctx.globalAlpha = 0.28;
+    bctx.drawImage(p.shadow, p.x0 + 1.2, p.y0 + 1.8, p.w, p.h);
+    bctx.restore();
+    bctx.drawImage(p.img, p.x0, p.y0, p.w, p.h);
   }
 
   function drawFlying(p, prog, impact) {
@@ -372,33 +331,22 @@
     var px = p.c[0] + (p.c[0] - W / 2) * (persp - 1) * 0.22 + p.lx * h;
     var py = p.c[1] + (p.c[1] - H / 2) * (persp - 1) * 0.22 + p.ly * h;
     var rot = p.rot0 * h, tilt = Math.cos(p.tilt0 * h);
-    var ca = Math.cos(p.axis), sa = Math.sin(p.axis), cr = Math.cos(rot), sr = Math.sin(rot);
-    function tf(v, ox, oy, k) {
-      var x = v[0] - p.c[0], y = v[1] - p.c[1];
-      var along = (x * ca + y * sa) * tilt, across = -x * sa + y * ca;
-      x = (along * ca - across * sa) * k; y = (along * sa + across * ca) * k;
-      return [ox + x * cr - y * sr, oy + x * sr + y * cr];
-    }
-    if (h > 0.001) {                          // ombre portée sur le mur
-      ctx.globalAlpha = 0.08 + 0.32 * Math.pow(1 - h, 2);
-      ctx.fillStyle = 'rgb(80,30,8)';
-      path(ctx, p.q.map(function (v) { return tf(v, p.c[0] + h * FS * 0.35, p.c[1] + h * FS * 0.5, 1 + h * 0.5); }), 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+    if (h > 0.001) {                                       // ombre sur le pavement
+      drawPieceAt(ctx, p, p.shadow, p.c[0] + h * FS * 0.35, p.c[1] + h * FS * 0.5, 1 + h * 0.5, rot, tilt, 0.06 + 0.3 * Math.pow(1 - h, 2));
     }
     var alpha = Math.min(1, prog * 5) * (0.6 + 0.4 * (1 - h));
-    var flash = impact >= 0 && impact < 0.6 ? 0.5 * (1 - impact / 0.6) : 0;
-    drawPiece(ctx, p.q.map(function (v) { return tf(v, px, py, scale); }),
-                   p.inner.map(function (v) { return tf(v, px, py, scale); }), p, alpha, flash);
-    var shade = (1 - Math.abs(tilt)) * 0.45;
-    if (shade > 0.02) {
-      ctx.globalAlpha = alpha * shade; ctx.fillStyle = '#000';
-      path(ctx, p.q.map(function (v) { return tf(v, px, py, scale); }), 2); ctx.fill(); ctx.globalAlpha = 1;
+    drawPieceAt(ctx, p, p.img, px, py, scale, rot, tilt, alpha);
+    var shade = (1 - Math.abs(tilt)) * 0.5;
+    if (shade > 0.02) drawPieceAt(ctx, p, p.shadow, px, py, scale, rot, tilt, alpha * shade);
+    if (impact >= 0 && impact < 0.6) {                     // éclat de lumière à l'impact
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      drawPieceAt(ctx, p, p.img, px, py, scale, rot, tilt, 0.35 * (1 - impact / 0.6));
+      ctx.restore();
     }
   }
 
   var shake = 0;
-  function frame(now) {
+  function frameStep(now) {
     var time = now - t0, flying = [], hits = 0;
     bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     pieces.forEach(function (p) {
@@ -409,11 +357,10 @@
       if (tau > p.dur && !p.hit) { p.hit = true; hits++; }
       flying.push(p);
     });
-    // Chaque éclat qui frappe le mur le fait trembler un peu.
-    shake = Math.min(8, shake * 0.8 + hits * 1.3);
+    shake = Math.min(8, shake * 0.8 + hits * 2.2);
     var ox = (Math.random() - 0.5) * shake, oy = (Math.random() - 0.5) * shake;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = WALL;
+    ctx.fillStyle = GROUT;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bed, ox * DPR, oy * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, ox * DPR, oy * DPR);
@@ -422,12 +369,12 @@
       var tt = time - p.delay;
       if (tt <= p.dur) drawFlying(p, tt / p.dur, -1); else drawFlying(p, 1, (tt - p.dur) / IMPACT);
     });
-    if (time < info.total + 400) requestAnimationFrame(frame);
+    if (time < info.total + 400) requestAnimationFrame(frameStep);
     else { running = false; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bed, 0, 0); }
   }
 
   function play() {
-    drawWall();
+    drawFloor();
     pieces.forEach(function (p) { p.placed = false; p.hit = false; });
     if (reduceMotion) {
       pieces.forEach(function (p) { placeOnBed(p); p.placed = true; });
@@ -435,14 +382,14 @@
       return;
     }
     t0 = performance.now();
-    if (!running) { running = true; requestAnimationFrame(frame); }
+    if (!running) { running = true; requestAnimationFrame(frameStep); }
   }
 
   document.getElementById('rejouer').addEventListener('click', play);
   window.addEventListener('keydown', function (e) {
     if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); play(); }
   });
-  var timer, lastW = window.innerWidth, lastH = window.innerHeight;
+  var timer, lastW = 0, lastH = 0;
   window.addEventListener('resize', function () {
     clearTimeout(timer);
     timer = setTimeout(function () {
@@ -452,8 +399,19 @@
     }, 250);
   });
 
-  build();
-  play();
-  window.__count = pieces.length;
+  var started = false;
+  function go() {
+    if (started) return;
+    started = true; lastW = window.innerWidth; lastH = window.innerHeight;
+    build(); play();
+    window.__count = pieces.length;
+  }
+  if (document.fonts && document.fonts.load) {
+    Promise.all([
+      document.fonts.load('400 100px "Instrument Serif"'),
+      document.fonts.load('italic 400 100px "Instrument Serif"')
+    ]).then(go, go);
+    setTimeout(go, 2500);
+  } else go();
 })();
 </script>
