@@ -486,6 +486,8 @@
     for (n = start; n < pieces.length; n++) {
       if (!pts[n]) { pieces[n].dead = true; continue; }
       var h = hull(pts[n]);
+      // forme en croissant (autour d'une courbe) : on garde l'éclat d'origine plutôt que son enveloppe
+      if (polyArea(h) > pts[n].length / 4 * G * G * 1.5) h = pieces[n].q;
       if (h.length > 6) h = rdpLoop(h, G * 0.6);
       if (h.length < 3) { pieces[n].dead = true; continue; }
       var sh = shrink(h, joint);

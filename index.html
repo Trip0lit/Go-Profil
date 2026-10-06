@@ -4,11 +4,8 @@ layout: default
 {%- assign p = site.data.profil -%}
 <section class="hero container">
   {%- if p.sur_titre %}<p class="badge">{{ p.sur_titre }}</p>{% endif %}
-  <h1 class="hero__titre">
-    <span class="hero__paren" aria-hidden="true">(</span>
-    <span class="hero__texte" data-mosaic>{{ p.nom }}</span>
-    <span class="hero__paren" aria-hidden="true">)</span>
-  </h1>
+  <h1 class="sr-only">{{ p.nom }}</h1>
+  <div class="plaque plaque--hero" data-plaque="{{ p.nom }}" aria-hidden="true"></div>
   <p class="lead">{{ p.accroche }}</p>
   <div class="hero__actions">
     <a class="btn" href="{{ '/activites/' | relative_url }}">Découvrir mes activités</a>
@@ -17,9 +14,9 @@ layout: default
 </section>
 
 {%- if p.image_accueil %}
+<hr class="bande" aria-hidden="true">
 <section class="vitrine">
   <div class="cadre cadre--fenetre">
-    <div class="cadre__barre" aria-hidden="true"><i></i><i></i><i></i><span>{{ p.nom }}</span></div>
     <div class="mosaic-img"><img src="{% include image-url.html src=p.image_accueil %}" alt=""></div>
   </div>
 </section>

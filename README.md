@@ -1,7 +1,8 @@
 # Go-Profil
 
 Un site personnel pour me présenter et cataloguer mes activités, avec un blog.
-Les titres et les images se construisent avec des pièces de mosaïque qui tombent.
+Style faïence bleu et blanc : votre nom et les titres des pages sont posés en mosaïque, pièce par pièce,
+dans un cadre à filets ; les images et les autres titres se construisent aussi en tesselles qui tombent.
 
 Le site est fait avec **Jekyll** et hébergé gratuitement par **GitHub Pages**.
 **Pour ajouter du contenu, aucun code n'est nécessaire** : tout se fait depuis le site de GitHub, avec votre navigateur.
@@ -188,7 +189,7 @@ L'article d'exemple et le carnet de voyage peuvent être supprimés quand vous n
 
 Ces textes sont dans le dossier **`_data`**, avec des explications directement dans les fichiers.
 
-- **`_data/profil.yml`** : votre nom, la phrase d'accroche, l'image de l'accueil,
+- **`_data/profil.yml`** : votre nom (affiché en mosaïque en haut de l'accueil), la phrase d'accroche, l'image de l'accueil,
   le texte « Qui suis-je ? », les chiffres et les liens de contact (e-mail, réseaux…).
 - **`_data/activites.yml`** : le catalogue de vos activités. Pour en ajouter une,
   copiez un bloc complet (de `- titre:` jusqu'à la ligne avant le `- titre:` suivant),
@@ -209,6 +210,9 @@ Exemple d'activité :
 > ⚠️ Dans ces fichiers, **les espaces en début de ligne comptent** : alignez bien chaque ligne
 > sur celles du bloc copié. Mettez les textes entre guillemets `"…"`, surtout s'ils contiennent
 > le signe deux-points `:`.
+
+Le titre en mosaïque des pages Blog et Activités se change avec la ligne `plaque:` en haut de
+`blog/index.html` et `activites/index.html` (un texte court, deux ou trois mots, se lit mieux).
 
 Le titre de l'onglet du navigateur et la description pour les moteurs de recherche se règlent
 dans **`_config.yml`** (lignes `title` et `description`).
@@ -243,7 +247,8 @@ _data/               Vos textes : profil et catalogue d'activités
 _posts/              Les articles du blog (un fichier .md par article)
 assets/images/       Toutes les photos
 assets/css/site.css  Le design (couleurs, polices…)
-assets/js/mosaic.js  L'effet mosaïque et les animations
+assets/js/plaque.js  Les plaques en mosaïque (nom et titres de pages)
+assets/js/mosaic.js  L'effet mosaïque des images et des autres titres
 _layouts/            Modèles des pages (accueil, article…)
 _includes/           Morceaux réutilisables (photo, galerie, en-tête…)
 blog/, activites/    Les pages Blog et Activités

@@ -1,26 +1,30 @@
 /* ==========================================================
    Go-Profil — feuille de style
-   Palette crème / olive, titres serif condensés.
+   Style faïence : bleu et blanc, titres en capitales serif, cadres à filets.
    ========================================================== */
 
 :root {
-  --bg: #f1eee3;
-  --bg-2: #e8e4d5;
-  --surface: #f8f6ef;
-  --ink: #1f1f1a;
-  --muted: #6d6b5e;
-  --line: #dcd6c4;
-  --olive: #5d5e47;
-  --olive-dark: #47483a;
-  --sand: #b9a77c;
+  /* Faïence : blanc émaillé, bleu de cobalt, joints gris-bleu */
+  --bg: #f6f8fc;
+  --bg-2: #e8eef8;
+  --surface: #ffffff;
+  --ink: #0b1d42;
+  --muted: #4b5b7a;
+  --line: #c9d5e8;
+  --olive: #1f4fa3;        /* bleu de cobalt (nom historique de la variable) */
+  --olive-dark: #163c7d;
+  --sand: #9cb9e3;         /* bleu ciel */
+  --grout: #9aa3ad;
+  --navy: #0b1d42;
 
-  --serif: "Instrument Serif", "Times New Roman", serif;
+  --serif: "Playfair Display SC", "Playfair Display", Georgia, serif;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --radius: 14px;
-  --radius-l: 22px;
+  --radius: 4px;
+  --radius-l: 6px;
   --max: 1180px;
   --gutter: clamp(16px, 4vw, 40px);
+  color-scheme: light;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -396,3 +400,90 @@ figcaption { font-size: .9rem; color: var(--muted); text-align: center; margin-t
   .js .mosaic-img > img { opacity: 1; }
   *, *::before, *::after { transition-duration: .01ms !important; }
 }
+
+
+/* ==========================================================
+   Faïence : ce qui donne au site l'allure de la plaque
+   ========================================================== */
+
+/* Fond : écailles bleu pâle, comme le fond de la plaque */
+body {
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cg fill='none' stroke='%239cb9e3' stroke-opacity='.28' stroke-width='1.5'%3E%3Cpath d='M0 40a20 20 0 0 1 40 0M40 40a20 20 0 0 1 40 0M-20 20a20 20 0 0 1 40 0M20 20a20 20 0 0 1 40 0M60 20a20 20 0 0 1 40 0M8 40a12 12 0 0 1 24 0M48 40a12 12 0 0 1 24 0'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Titres en capitales serif, bleu de cobalt */
+.titre-xl, .titre-l, .footer__title, .prose h2, .activite__texte h3, .carte-article h3, .article__nav a, .chiffres dd {
+  font-family: var(--serif); font-weight: 900; letter-spacing: .02em; color: var(--olive);
+}
+.titre-xl { font-size: clamp(2.2rem, 6vw, 4.6rem); line-height: 1.05; text-wrap: balance; }
+.titre-l { font-size: clamp(1.9rem, 4.4vw, 3.2rem); line-height: 1.08; text-wrap: balance; }
+.titre-l em, .titre-xl em { font-style: normal; color: var(--olive-dark); }
+.activite__texte h3, .carte-article h3 { font-size: 1.55rem; line-height: 1.15; }
+.prose h2 { font-size: clamp(1.6rem, 3.4vw, 2.2rem); }
+.prose blockquote { font-family: "Playfair Display", Georgia, serif; color: var(--olive-dark); }
+.eyebrow { color: var(--olive); letter-spacing: .18em; }
+
+/* Bande de tesselles : bleu, blanc, ciel, comme le cadre */
+.bande {
+  height: 10px; border: 0; margin: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--olive) 0 10px, var(--grout) 10px 11px, #fff 11px 21px, var(--grout) 21px 22px, var(--sand) 22px 32px, var(--grout) 32px 33px);
+  box-shadow: 0 -1px 0 var(--grout), 0 1px 0 var(--grout);
+}
+
+/* Cadre à double filet, repris sur toutes les surfaces */
+.cadre, .activite, .carte-article > a, .badge, .nav {
+  border: 2px solid var(--olive);
+  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px var(--sand);
+}
+.cadre, .activite, .carte-article > a { padding: 12px; background: var(--surface); }
+.activite:hover, .carte-article > a:hover { box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px var(--sand), 0 24px 40px -30px rgba(11, 29, 66, .55); }
+.badge { background: #fff; color: var(--olive); font-family: var(--serif); font-weight: 700; letter-spacing: .08em; padding: .45rem .9rem; }
+.activite__meta span { background: var(--bg-2); color: var(--olive-dark); border-radius: 2px; }
+
+/* En-tête */
+.nav { background: rgba(255, 255, 255, .92); border-radius: 6px; }
+.est-defile .nav { border-color: var(--olive); }
+.nav__logo { font-family: var(--serif); font-weight: 900; font-size: 1.25rem; color: var(--olive); letter-spacing: .04em; }
+.nav__mark i { background: var(--olive); }
+.nav__mark i:nth-child(2), .nav__mark i:nth-child(3) { background: var(--sand); }
+.nav__mark i:nth-child(4) { background: var(--navy); }
+.nav__links a { color: var(--ink); }
+
+/* Boutons : carreau bleu */
+.btn {
+  border-radius: 3px; background: var(--olive); color: #fff; font-weight: 600; letter-spacing: .04em;
+  box-shadow: inset 0 0 0 2px var(--olive), inset 0 0 0 4px rgba(255, 255, 255, .5);
+}
+.btn:hover { background: var(--olive-dark); }
+.btn--clair { background: #fff; color: var(--olive); }
+.btn--clair:hover { background: var(--bg-2); }
+.filtre { border-radius: 3px; border-color: var(--sand); }
+.filtre[aria-pressed="true"] { background: var(--olive); border-color: var(--olive); }
+
+/* Plaques en mosaïque (assets/js/plaque.js) */
+.plaque { position: relative; width: 100%; margin: 0 auto; }
+.plaque canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.plaque--hero { max-width: 1100px; aspect-ratio: 2.3 / 1; }
+.plaque--page { max-width: 900px; aspect-ratio: 3.6 / 1; }
+@media (max-width: 640px) {
+  .plaque--hero { aspect-ratio: 1.15 / 1; }
+  .plaque--page { aspect-ratio: 2 / 1; }
+}
+.hero { padding-top: clamp(1.5rem, 4vw, 3rem); }
+.page-hero { padding-top: clamp(1.5rem, 4vw, 3rem); }
+.page-hero .lead, .hero .lead { margin-top: 1.4rem; }
+
+/* Pied de page : bleu nuit, bordé de tesselles */
+.site-footer { background: var(--navy); border-radius: 0; position: relative; }
+.site-footer::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 12px;
+  background: repeating-linear-gradient(90deg, var(--olive) 0 12px, var(--grout) 12px 13px, #fff 13px 25px, var(--grout) 25px 26px, var(--sand) 26px 38px, var(--grout) 38px 39px);
+}
+.site-footer .footer__title { color: #fff; }
+.site-footer .eyebrow { color: var(--sand); }
+.footer__liens a { border-radius: 3px; border-color: rgba(156, 185, 227, .5); }
+
+/* Lettres des titres en éclats : bleu */
+.m-frag { color: var(--olive); }
